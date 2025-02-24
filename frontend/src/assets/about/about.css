@@ -1,0 +1,63 @@
+.content {
+  padding: 20px;
+  padding-top: 250px;
+  padding-left: 340px;
+  position: relative;
+}
+
+.content p {
+  position: absolute;
+  top: 50px;
+  left: 20px;
+  width: 60%;
+}
+
+.images {
+  position: absolute;
+  top: 50px;
+  right: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.top-image {
+  width: 300px;
+  height: auto;
+}
+
+.button-about {
+  display: block;
+  margin-top: 150px;
+  margin-left: 20px;
+  padding: 10px 20px;
+  background-color: orange;
+  color: black;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+a {
+  text-decoration: none;
+}
+
+.bookshelf {
+  display: flex;
+  justify-content: left;
+  align-items: flex-end;
+  margin-top: 170px;
+  margin-left: 10px;
+  gap: 0px;
+  border-radius: 10px;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+
+.bookshelf img {
+  width: 60px;
+  height: 100px;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
