@@ -1,5 +1,5 @@
-import React from "react";
-import styled from "styled-components";
+import React from 'react';
+import styled from 'styled-components';
 
 const Loader = () => {
   return (
@@ -13,7 +13,7 @@ const Loader = () => {
       </div>
     </StyledWrapper>
   );
-};
+}
 
 const StyledWrapper = styled.div`
   .loader {
@@ -58,17 +58,14 @@ const StyledWrapper = styled.div`
       transform: rotateY(0deg);
     }
 
-    50%,
-    80% {
+    50%, 80% {
       transform: rotateY(-180deg);
     }
 
-    90%,
-    100% {
+    90%, 100% {
       opacity: 0;
       transform: rotateY(-180deg);
     }
-  }
-`;
+  }`;
 
 export default Loader;

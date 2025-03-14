@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { updateRoutes } from "../../store/routesSlice";
+import BookCard from "../BookCard/BookCard";
+
+const API_URL = "http://localhost:1000";
 
 const Navbar = () => {
   const [query, setQuery] = useState("");
@@ -24,38 +27,33 @@ const Navbar = () => {
     }
 
     try {
-      const response = await fetch(
-        `http://localhost:1000/all-books?search=${searchValue}`
-      );
+      const response = await fetch(`${API_URL}/api/v1/get-all-books-search?search=${searchValue}`);
       const data = await response.json();
-      setBooks(data);
+      if (data.status === "success") {
+        setBooks(data.data);
+      } else {
+        setBooks([]);
+      }
     } catch (error) {
       console.error("Error fetching books:", error);
+      setBooks([]);
     }
   };
 
   return (
-    <nav className="navbar fixed top-0 left-0 w-full bg-white z-50">
+    <nav className="navbar fixed top-0 left-0 w-full bg-white z-50 p-4 flex justify-between items-center">
       <div className="logo-container">
-        <img
-          src="../src/assets/home-page/l.png"
-          alt="BookMosaic Logo"
-          className="logo"
-        />
+        <img src="../src/assets/home-page/l.png" alt="BookMosaic Logo" className="w-20" />
       </div>
-
-      <div>
-        <ul className="nav-links">
-          {routes.map((route) => (
-            <li key={route.path} className="hover:text-blue-500">
-              <Link to={route.path}>{route.component}</Link>
-            </li>
-          ))}
-        </ul>
-      </div>
-
+      <ul className="nav-links flex gap-4">
+        {routes.map((route) => (
+          <li key={route.path} className="hover:text-blue-500">
+            <Link to={route.path}>{route.component}</Link>
+          </li>
+        ))}
+      </ul>
       {isLoggedIn && (
-        <div className="icons">
+        <div className="icons flex gap-3">
           <Link to="/wishlist" className="hover:text-red-500">
             <span className="material-symbols-outlined">favorite</span>
           </Link>
@@ -67,22 +65,32 @@ const Navbar = () => {
           </Link>
         </div>
       )}
-
-      <div className="search-bar">
+      <div className="relative">
         <input
           type="text"
           placeholder="Find your Book"
           value={query}
           onChange={handleSearch}
+          className="border p-2 rounded-md"
         />
-        <i className="search-icon">🔍</i>
-
+        <i className="search-icon absolute right-3 top-2">🔍</i>
         {books.length > 0 && (
-          <ul className="search-results">
-            {books.map((book) => (
-              <li key={book._id}>{book.title}</li>
-            ))}
-          </ul>
+          <div className="absolute top-16 left-[calc(50%-300px)] transform -translate-x-1/2 bg-white shadow-2xl w-[760px] max-h-[500px] overflow-auto mt-2 p-4 rounded-lg z-50 overflow-x-hidden">
+            <div className="grid grid-cols-2 gap-3">
+              {books.map((book) => (
+                <Link to={`/view-book-details/${book._id}`} key={book._id}>
+                  <div
+                    onClick={() => {
+                      setBooks([]);
+                      setQuery("");
+                    }}
+                  >
+                    <BookCard data={book} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </nav>

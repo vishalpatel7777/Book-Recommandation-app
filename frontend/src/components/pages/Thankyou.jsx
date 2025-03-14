@@ -1,31 +1,28 @@
 import React from "react";
-import ThankYouImage from "../../../src/assets/thank-you-page/thank-you.png";
-import "../../../src/assets/thank-you-page/thankyou.css";
+import ThankYouImage from "../../assets/thank-you-page/thank-you.png";
+import "../../assets/thank-you-page/thankyou.css"
 
 const ThankYouPage = () => {
   const handleDownload = () => {
+    // Add your logic for downloading the PDF file here
     alert("Your PDF download will start soon!");
   };
 
   return (
     <div className="thankyou relative min-h-screen  pt-[121px]">
-      <img
-        className="thank-you-img"
+      <img className="thank-you-img"
         src={ThankYouImage}
         alt="thankyou"
-        style={{ maxWidth: "100%", height: "auto" }}
+        style={{ maxWidth: "100%", height: "auto" }} // Optional inline styling
       />
-      <button
-        className="thankyou-btn"
-        onClick={handleDownload}
-        style={buttonStyle}
-      >
+      <button  className="thankyou-btn" onClick={handleDownload} style={buttonStyle}>
         Download your PDF file!!
       </button>
     </div>
   );
 };
 
+// Optional: Add custom styles
 const buttonStyle = {
   backgroundColor: "#63918b",
   color: "#fff",

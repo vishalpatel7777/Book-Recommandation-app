@@ -8,10 +8,11 @@ import {
 
 function Footer() {
   return (
-    <footer className="relative top-8 w-full bg-gray-50">
+    <footer className="relative top- w-full bg-gray-50">
       <hr />
 
       <div className="flex justify-between px-10 py-6 text-lg">
+        {/* Our Company  */}
         <div className="flex flex-col space-y-2">
           <h3 className="font-bold">OUR COMPANY</h3>
           <ul className="space-y-1">
@@ -21,6 +22,7 @@ function Footer() {
           </ul>
         </div>
 
+        {/* Legal Area */}
         <div className="flex flex-col space-y-2">
           <h3 className="font-bold">LEGAL AREA</h3>
           <ul className="space-y-1">
@@ -30,6 +32,7 @@ function Footer() {
           </ul>
         </div>
 
+        {/* Follow Us */}
         <div className="flex flex-col space-y-3">
           <h3 className="font-bold">FOLLOW US</h3>
           <div className="flex space-x-4">

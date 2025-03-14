@@ -1,4 +1,5 @@
 import React from "react";
+import RecommendedBooks from "../Category/RecommendedBooks";
 
 function Home() {
   return (
@@ -13,10 +14,12 @@ function Home() {
                 Dream Book.
               </h1>
               <p className="text-[24px] font-light italic text-gray-600 mb-6">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-                <br />
-                eiusmod tempor incididunt ut labore et dolore.
+                “A book is more than just pages ,&nbsp;&nbsp; it’s a doorway to
+                worlds unknown,
+                <br />a whisper of wisdom from the past, &nbsp; and a spark for
+                dreams yet to come.” 📖✨
               </p>
+
               <a
                 href="/category"
                 className="text-[20px] font-medium bg-[#d46a6a] text-black py-2 px-6 rounded-full hover:bg-[#b95353] transition inline-block top-10 relative"
@@ -24,7 +27,7 @@ function Home() {
                 Order Now
               </a>
             </div>
-            <div className="relative top-63 left-10">
+            <div className="relative top-66 left-10">
               <img
                 src="../src/assets/home-page/book.png"
                 alt="Bookshelf"
