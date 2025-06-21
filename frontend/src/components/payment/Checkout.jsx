@@ -2,8 +2,8 @@ import { load } from "@cashfreepayments/cashfree-js";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import api from "../../lib/axios";
 
-const API_URL = "http://localhost:1000";
 
 function Checkout() {
   const { state } = useLocation();
@@ -22,7 +22,7 @@ function Checkout() {
 
       try {
         setLoading(true);
-        const response = await axios.post(`${API_URL}/api/v1/create-payment`, {
+        const response = await api.post("/create-payment", {
           amount,
           currency: "INR",
           customer_id,
@@ -39,7 +39,7 @@ function Checkout() {
           cashfree.checkout({ paymentSessionId: orderToken, redirectTarget: "_modal" })
             .then((result) => {
               if (result.paymentDetails) {
-                console.log("Payment Successful:", result.paymentDetails);
+                console.log("Payment Successful");
                 navigate("/payment-success", {
                   state: {
                     book: book,

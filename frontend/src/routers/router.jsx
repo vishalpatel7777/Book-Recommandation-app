@@ -26,23 +26,22 @@ import Favorite from "../components/pages/Wishlistmy";
 import Buy from "../components/pages/Buy";
 import Checkout from "../components/payment/Checkout";
 import ResetPassword from "../components/pages/ResetPassword";
-import PaymentSuccess from "../components/Payment/PaymentSuccess";
+import PaymentSuccess from "../components/payment/PaymentSuccess";
 import AdminNavbar from "../components/Admin/AdminNav";
 import AdminHome from "../components/Admin/AdminHome";
 import AdminDashboard from "../components/Admin/AdminDashboard";
-import DailyStats from "../components/Admin/Dashboard/DailyStats";
-import UserActivity from "../components/Admin/Dashboard/UserActivity";
+import DailyStats from "../components/Admin/DashBoard/DailyStats";
+import UserActivity from "../components/Admin/DashBoard/UserActivity";
 import BookAnalytics from "../components/Admin/Dashboard/BookAnalytics";
 import MonthlyAnalytics from '../components/Admin/Dashboard/MonthlyStats';
 import AdminBooks from "../components/Admin/EditBook";
 import AddBook from "../components/Admin/Managebooks/AddBook";
 import EditBook from "../components/Admin/Managebooks/EditBook";
 import DeleteBook from "../components/Admin/Managebooks/DeleteBook";
-import AdminUser from "../components/Admin/Edituser";
+import AdminUser from "../components/Admin/EditUser";
 import AdminProfile from "../components/Admin/AdminProfile";
 import AdminSettings from "../components/Admin/AdminSetting";
 
-const API_URL = "http://localhost:1000";
 
 const router = createBrowserRouter([
   {

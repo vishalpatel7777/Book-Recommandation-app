@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 const Notification = require("../models/notification");
 const Purchase = require("../models/purchase");
-const Review = require("../models/Review");
+const Review = require("../models/review");
 const Rating = require("../models/rating");
 const Book = require("../models/book");
 const Order = require("../models/order");
@@ -201,122 +201,77 @@ router.get("/get-review/:userId/:bookId", async (req, res) => {
   }
 });
 
-router.get("/get-recommended-books", authenticateToken, async (req, res) => {
+router.get("/get-recommended-books", async (req, res) => {
   try {
-    const userId = req.headers.id || "";
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
-
+   
     const ratings = await Rating.find().populate("user book");
     const validRatings = ratings.filter((r) => r.user && r.book);
-
     const allBooks = await Book.find();
 
-    const getTopRatedBooksByMaxRating = async (limit = 4, excludeIds = []) => {
-      const ratingStats = await Rating.aggregate([
-        {
-          $match: {
-            book: { $nin: excludeIds.map((id) => new mongoose.Types.ObjectId(id)) },
-          },
-        },
-        {
-          $group: {
-            _id: "$book",
-            maxRating: { $max: "$rate" },
-            ratings: { $push: "$rate" },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { maxRating: -1, count: -1 } },
-        { $limit: limit },
-      ]);
-      const topBookIds = ratingStats.map((stat) => stat._id);
-      let topBooks = await Book.find({ _id: { $in: topBookIds } });
-      topBooks = await addRatingsToBooks(topBooks);
-      return topBooks.map((book) => {
-        const stat = ratingStats.find((s) => s._id.toString() === book._id.toString());
-        return {
-          ...book,
-          maxRating: stat ? stat.maxRating : 0,
-          individualRatings: stat ? stat.ratings : [],
-          isRated: excludeIds.includes(book._id.toString()),
-        };
-      });
-    };
-
+    // If no ratings exist, return 4 most recent books
     if (!validRatings.length) {
-      const topRatedBooks = await getTopRatedBooksByMaxRating();
-      return res.status(200).json({ data: topRatedBooks });
+      const recentBooks = await Book.find().sort({ createdAt: -1 }).limit(4);
+      const recentBooksWithRatings = await addRatingsToBooks(recentBooks);
+      return res.status(200).json({ data: recentBooksWithRatings });
     }
 
-    const userIds = [...new Set(validRatings.map((r) => r.user._id.toString()))];
-    const allBookIds = allBooks.map((b) => b._id.toString());
+    // Aggregate all rated books with their average ratings
+    const ratedBookStats = await Rating.aggregate([
+      {
+        $group: {
+          _id: "$book",
+          avgRating: { $avg: "$rate" },
+          count: { $sum: 1 },
+          latestRating: { $max: "$createdAt" },
+        },
+      },
+      { $sort: { avgRating: -1, latestRating: -1 } }, // Sort by avgRating, then recency for ties
+    ]);
 
-    const X = [];
-    const y = [];
-    const ratingMap = validRatings.reduce((acc, r) => {
-      acc[`${r.user._id}-${r.book._id}`] = r.rate;
-      return acc;
-    }, {});
+    let recommendedBooks = [];
+    const ratedBookIds = ratedBookStats.map((stat) => stat._id.toString());
 
-    userIds.forEach((uid, userIndex) => {
-      allBookIds.forEach((bid, bookIndex) => {
-        const rating = ratingMap[`${uid}-${bid}`] || 0;
-        X.push([userIndex, bookIndex]);
-        y.push(rating);
-      });
+    // Fetch rated books
+    let ratedBooks = await Book.find({ _id: { $in: ratedBookIds } });
+    ratedBooks = await addRatingsToBooks(ratedBooks);
+
+    // Map and sort rated books
+    recommendedBooks = ratedBooks.map((book) => {
+      const stat = ratedBookStats.find((s) => s._id.toString() === book._id.toString());
+      return {
+        ...book,
+        avgRating: stat ? stat.avgRating : 0,
+        ratingCount: stat ? stat.count : 0,
+        latestRating: stat ? stat.latestRating : null,
+      };
+    }).sort((a, b) => {
+      if (b.avgRating === a.avgRating) {
+        return new Date(b.latestRating) - new Date(a.latestRating); // Tie-break by recency
+      }
+      return b.avgRating - a.avgRating; // Primary sort by avgRating
     });
 
-    const knn = new KNN(X, y, { k: 3 });
-
-    const userRatings = await Rating.find({ user: userId });
-    const userRatedBookIds = userRatings.map((r) => r.book.toString());
-
-    const userIndex = userIds.indexOf(userId);
-    if (userIndex === -1) {
-      const topRatedBooks = await getTopRatedBooksByMaxRating();
-      return res.status(200).json({ data: topRatedBooks });
-    }
-
-    const predictions = [];
-    allBookIds.forEach((bookId, bookIndex) => {
-      const predictedRating = knn.predict([[userIndex, bookIndex]])[0];
-      const userRating = userRatings.find((r) => r.book.toString() === bookId)?.rate;
-      predictions.push({
-        bookId,
-        predictedRating: userRating || predictedRating,
-        isRated: !!userRating,
-      });
-    });
-
-    predictions.sort((a, b) => b.predictedRating - a.predictedRating);
-    const topPredictions = predictions.slice(0, 4);
-    const topBookIdsFromKNN = topPredictions.map((p) => p.bookId);
-
-    let recommendedBooks = await getTopRatedBooksByMaxRating(4, userRatedBookIds);
-
-    const allFlat = predictions.every(
-      (p) => p.predictedRating === predictions[0].predictedRating
-    );
-    if (!allFlat) {
-      const knnBooks = await Book.find({ _id: { $in: topBookIdsFromKNN } });
-      const knnBooksWithRatings = await addRatingsToBooks(knnBooks);
-      const blendedBooks = [...knnBooksWithRatings, ...recommendedBooks]
-        .reduce((unique, book) => {
-          if (!unique.some((b) => b._id.toString() === book._id.toString()))
-            unique.push(book);
-          return unique;
-        }, [])
-        .slice(0, 4);
-      recommendedBooks = blendedBooks.map((book) => {
-        const prediction = topPredictions.find((p) => p.bookId === book._id.toString());
-        return {
+    // Fill up to 4 with recent books if needed
+    const numRatedBooks = recommendedBooks.length;
+    if (numRatedBooks < 4) {
+      const remaining = 4 - numRatedBooks;
+      const recentBooks = await Book.find({
+        _id: { $nin: ratedBookIds.map((id) => new mongoose.Types.ObjectId(id)) },
+      })
+        .sort({ createdAt: -1 })
+        .limit(remaining);
+      const recentBooksWithRatings = await addRatingsToBooks(recentBooks);
+      recommendedBooks = [
+        ...recommendedBooks,
+        ...recentBooksWithRatings.map((book) => ({
           ...book,
-          predictedRating: prediction ? prediction.predictedRating : book.maxRating || 0,
-          isRated: prediction ? prediction.isRated : false,
-        };
-      });
+          avgRating: book.ratings || 0,
+          ratingCount: 0,
+          latestRating: null,
+        })),
+      ].slice(0, 4);
+    } else {
+      recommendedBooks = recommendedBooks.slice(0, 4);
     }
 
     res.status(200).json({ data: recommendedBooks });

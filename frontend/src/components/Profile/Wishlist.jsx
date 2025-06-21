@@ -3,8 +3,7 @@ import axios from "axios";
 import Loader from "../Loader/Loader";
 import WishlistBookCard from "../BookCard/WishlistBookCard";
 import { FaBook } from "react-icons/fa";
-
-const API_URL = "http://localhost:1000";
+import api from '../../lib/axios'
 
 const Wishlist = () => {
   const [wishlist, setWishlist] = useState([]);
@@ -19,7 +18,7 @@ const Wishlist = () => {
     const fetch = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/api/v1/get-all-wishlist`, { headers });
+        const response = await api.get("/get-all-wishlist", { headers });
         setWishlist(response.data.data || []);
       } catch (error) {
         console.error("Error fetching wishlist:", error);

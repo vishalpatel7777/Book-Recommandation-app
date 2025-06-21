@@ -1,10 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
 import AnalogClock from "../Fun-components/AnalogClock";
 import MotivationalQuote from "../Fun-components/MotivationalQuote";
 import AdminNotes from "../Fun-components/AdminNotes";
-
-const API_URL = "http://localhost:1000";
 
 export default function Dashboard() {
   const location = useLocation();

@@ -14,11 +14,11 @@ function Footer() {
       <div className="flex justify-between px-10 py-6 text-lg">
         {/* Our Company  */}
         <div className="flex flex-col space-y-2">
-          <h3 className="font-bold">OUR COMPANY</h3>
+          <h3 className="font-bold">OUR PLATFORM</h3>
           <ul className="space-y-1">
-            <li>Find a Boutique</li>
-            <li>Careers</li>
-            <li>Cartier and Corporate Social Responsibility</li>
+            <li>About BookMosaic</li>
+            <li>Contact Us</li>
+            <li>FAQs</li>
           </ul>
         </div>
 
@@ -47,7 +47,7 @@ function Footer() {
               />
             </a>
             <a
-              href="https://wa.me/your-number"
+              href="https://wa.me/9265001227"
               target="_blank"
               rel="noopener noreferrer"
             >

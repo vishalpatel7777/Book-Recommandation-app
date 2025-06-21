@@ -11,8 +11,8 @@ import { AiFillDelete } from "react-icons/ai";
 import { FaArrowLeft } from "react-icons/fa6";
 import { FaStar, FaStarHalfAlt, FaRegStar } from "react-icons/fa";
 import CustomAlert from "../Alert/CustomAlert";
+import api from "../../lib/axios";
 
-const API_URL = "http://localhost:1000";
 
 const ViewBookDetails = () => {
   const navigate = useNavigate();
@@ -22,11 +22,15 @@ const ViewBookDetails = () => {
   const role = useSelector((state) => state.auth.role);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  
+  // Define max length for truncated description
+  const DESCRIPTION_MAX_LENGTH = 150;
 
   useEffect(() => {
     const fetch = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/v1/get-book-by-id/${id}`);
+        const response = await api.get(`/get-book-by-id/${id}`);
         setBook(response.data.data);
       } catch (error) {
         console.error("Error fetching book:", error);
@@ -44,7 +48,7 @@ const ViewBookDetails = () => {
 
   const handleWishlist = async () => {
     try {
-      const response = await axios.put(`${API_URL}/api/v1/add-to-wishlist`, {}, { headers });
+      const response = await api.put("/add-to-wishlist", {}, { headers });
       setAlertMessage(response.data.message);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);
@@ -57,7 +61,7 @@ const ViewBookDetails = () => {
 
   const handleAddtocart = async () => {
     try {
-      const response = await axios.put(`${API_URL}/api/v1/add-to-cart`, {}, { headers });
+      const response = await api.put("/add-to-cart", {}, { headers });
       setAlertMessage(response.data.message);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);
@@ -96,6 +100,13 @@ const ViewBookDetails = () => {
     );
   };
 
+  const getTruncatedDescription = (desc) => {
+    if (!desc) return "";
+    return desc.length > DESCRIPTION_MAX_LENGTH && !showFullDescription
+      ? `${desc.substring(0, DESCRIPTION_MAX_LENGTH)}...`
+      : desc;
+  };
+
   return (
     <>
       {Book === null && (
@@ -132,7 +143,15 @@ const ViewBookDetails = () => {
             </p>
             <p className="text-black mt-4 text-2xl">
               <span className="font-semibold">Description : </span>
-              {Book.desc}
+              {getTruncatedDescription(Book.desc)}
+              {Book.desc && Book.desc.length > DESCRIPTION_MAX_LENGTH && (
+                <button
+                  className="text-blue-700 hover:text-blue-600 ml-2 font-medium"
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                >
+                  {showFullDescription ? "Read Less" : "Read More"}
+                </button>
+              )}
             </p>
             <a
               href={Book.url}
@@ -144,7 +163,7 @@ const ViewBookDetails = () => {
               Get more Info
             </a>
             <p className="text-black mt-4 text-2xl flex">
-              Rating: &nbsp; {renderStars(Book.ratings)}
+              Rating:   {renderStars(Book.ratings)}
             </p>
 
             {isLoggedIn === true && role === "user" && (

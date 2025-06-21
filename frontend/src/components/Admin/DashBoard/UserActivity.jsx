@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import api from "../../../lib/axios";
 
-const API_URL = "http://localhost:1000";
 
 export default function UserActivity() {
   const [userActivity, setUserActivity] = useState([]);
@@ -10,7 +10,7 @@ export default function UserActivity() {
   useEffect(() => {
     const fetchUserActivity = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/v1/user-activity`);
+        const response = await api.get(`/user-activity`);
         setUserActivity(response.data.users || []);
       } catch (error) {
         console.error("Error fetching user activity:", error);

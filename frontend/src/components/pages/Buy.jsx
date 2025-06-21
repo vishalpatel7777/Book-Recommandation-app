@@ -6,8 +6,8 @@ import { GrLanguage } from "react-icons/gr";
 import { useSelector } from "react-redux";
 import { FaArrowLeft } from "react-icons/fa6";
 import { FaStar, FaStarHalfAlt, FaRegStar } from "react-icons/fa";
+import api from "../../lib/axios";
 
-const API_URL = "http://localhost:1000"; // Hardcoded for now
 
 const Buy = () => {
   const { id } = useParams();
@@ -32,8 +32,8 @@ const Buy = () => {
       }
 
       try {
-        const response = await axios.get(`${API_URL}/api/v1/get-book-by-id/${id}`);
-        console.log("Book Response:", response);
+        const response = await api.get(`/get-book-by-id/${id}`);
+      
         setBook(response.data.data || null);
       } catch (error) {
         console.error("Error fetching book:", error.response?.data || error);
@@ -50,10 +50,10 @@ const Buy = () => {
         return;
       }
 
-      console.log("Headers:", headers);
+
       try {
-        const response = await axios.get(`${API_URL}/api/v1/user-information/`, { headers });
-        console.log("User Response:", response);
+        const response = await api.get(`/user-information/`, { headers });
+
         setUser(response.data);
       } catch (error) {
         console.error("Error fetching user:", error.response?.data || error);
@@ -167,6 +167,7 @@ const Buy = () => {
                 >
                   Buy
                 </button>
+                
               </div>
             )}
           </div>

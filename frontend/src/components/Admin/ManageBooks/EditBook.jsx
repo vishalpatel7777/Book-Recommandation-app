@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import CustomAlert from "../../Alert/CustomAlert";
+import api from "../../../lib/axios";
 
-const API_URL = "http://localhost:1000";
 
 const EditBook = () => {
   const [books, setBooks] = useState([]);
@@ -30,7 +30,7 @@ const EditBook = () => {
 
   const fetchBooks = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/v1/get-all-books`);
+      const response = await api.get(`/get-all-books`);
       setBooks(response.data.data || []);
     } catch (error) {
       console.error("Error fetching books:", error);
@@ -72,7 +72,7 @@ const EditBook = () => {
       if (formData.price) formPayload.set("price", parseFloat(formData.price));
       if (formData.ratings) formPayload.set("ratings", parseFloat(formData.ratings));
 
-      await axios.put(`${API_URL}/api/v1/update-book/${selectedBook._id}`, formPayload, {
+      await api.put(`/update-book/${selectedBook._id}`, formPayload, {
         headers: {
           id: localStorage.getItem("id"),
           Authorization: `Bearer ${localStorage.getItem("token")}`,

@@ -4,7 +4,7 @@ const axios = require("axios");
 const { Cashfree } = require("cashfree-pg");
 const User = require("../models/user");
 const Book = require("../models/book");
-const Review = require("../models/Review");
+const Review = require("../models/review");
 const Rating = require("../models/rating");
 const Purchase = require("../models/purchase");
 const bcrypt = require("bcryptjs");
@@ -41,7 +41,7 @@ router.put("/update-admin-profile", authenticateToken, async (req, res) => {
       email,
       password,
       oldPassword,
-      profilePicture,
+      image,
       age,
       genre,
       phone,
@@ -55,7 +55,7 @@ router.put("/update-admin-profile", authenticateToken, async (req, res) => {
     const updatedFields = {
       fullname: fullname || undefined,
       email: email || undefined,
-      profilePicture: profilePicture || undefined,
+      image: image || undefined,
       age: age || undefined,
       genre: genre || undefined,
       phone: phone || undefined,

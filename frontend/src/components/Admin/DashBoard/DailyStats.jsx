@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import api from '../../../lib/axios.js'
 
-const API_URL = "http://localhost:1000";
 
 export default function DailyStats() {
   const [stats, setStats] = useState(null);
@@ -11,7 +11,7 @@ export default function DailyStats() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/v1/daily`);
+        const response = await axios.api("/daily");
         setStats(response.data);
       } catch (err) {
         setError("Failed to load statistics.");

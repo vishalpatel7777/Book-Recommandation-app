@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { updateRoutes } from "../../store/routesSlice";
 import BookCard from "../BookCard/BookCard";
-
-const API_URL = "http://localhost:1000";
+import BookMosaicLogo from "../../assets/home-page/l.png";
+import api from "../../lib/axios";
+import axios from "axios";
 
 const Navbar = () => {
   const [query, setQuery] = useState("");
@@ -12,10 +13,31 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
   const routes = useSelector((state) => state.routes);
+  const location = useLocation();
+  const searchRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     dispatch(updateRoutes({ isLoggedIn }));
   }, [isLoggedIn, dispatch]);
+
+  useEffect(() => {
+    setQuery("");
+    setBooks([]);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setBooks([]);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleSearch = async (e) => {
     const searchValue = e.target.value;
@@ -27,8 +49,10 @@ const Navbar = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/v1/get-all-books-search?search=${searchValue}`);
-      const data = await response.json();
+      const response = await api.get(`/get-all-books-search`, {
+        params: { search: searchValue },
+      });
+      const data = await response.data;
       if (data.status === "success") {
         setBooks(data.data);
       } else {
@@ -43,7 +67,14 @@ const Navbar = () => {
   return (
     <nav className="navbar fixed top-0 left-0 w-full bg-white z-50 p-4 flex justify-between items-center">
       <div className="logo-container">
-        <img src="../src/assets/home-page/l.png" alt="BookMosaic Logo" className="w-20" />
+        <img
+          src={BookMosaicLogo}
+          alt="BookMosaic Logo"
+          className="w-20 cursor-pointer"
+          onClick={() => {
+            navigate("/");
+          }}
+        />
       </div>
       <ul className="nav-links flex gap-4">
         {routes.map((route) => (
@@ -65,7 +96,7 @@ const Navbar = () => {
           </Link>
         </div>
       )}
-      <div className="relative">
+      <div className="relative" ref={searchRef}>
         <input
           type="text"
           placeholder="Find your Book"

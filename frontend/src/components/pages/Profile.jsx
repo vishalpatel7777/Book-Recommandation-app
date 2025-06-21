@@ -6,9 +6,8 @@ import Loader from "../Loader/Loader";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { IoIosLogOut } from "react-icons/io";
 import { authActions } from "../../store/auth";
+import api from "../../lib/axios";
 
-
-const API_URL = "http://localhost:1000"; // Hardcoded for now
 
 const Profile = () => {
   const dispatch = useDispatch();
@@ -28,7 +27,7 @@ const Profile = () => {
 
   useEffect(() => {
     const fetch = async () => {
-      const response = await axios.get(`${API_URL}/api/v1/user-information/`, { headers });
+      const response = await api.get(`/user-information/`, { headers });
       setProfile(response.data);
     };
     fetch();

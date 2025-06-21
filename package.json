@@ -1,0 +1,24 @@
+{
+  "name": "book-recommandation-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "frontend:build": "npm run build --prefix frontend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vishalpatel7777/Book-Recommandation-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vishalpatel7777/Book-Recommandation-app/issues"
+  },
+  "homepage": "https://github.com/vishalpatel7777/Book-Recommandation-app#readme",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

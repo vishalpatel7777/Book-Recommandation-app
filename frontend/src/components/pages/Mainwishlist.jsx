@@ -4,9 +4,8 @@ import axios from "axios";
 import { MdFavorite } from "react-icons/md";
 import { GrLanguage } from "react-icons/gr";
 import CustomAlert from "../Alert/CustomAlert";
+import api from "../../lib/axios";
 
-
-const API_URL = "http://localhost:1000"; // Hardcoded for now
 
 const Mainwishlist = () => {
   const { id } = useParams();
@@ -18,7 +17,7 @@ const Mainwishlist = () => {
 
   useEffect(() => {
     const fetch = async () => {
-      const response = await axios.get(`${API_URL}/api/v1/get-book-by-id/${id}`);
+      const response = await api.get(`/get-book-by-id/${id}`);
       setBook(response.data.data);
     };
     fetch();
@@ -31,7 +30,7 @@ const Mainwishlist = () => {
       bookid: Book?._id,
     };
     try {
-      const response = await axios.put(`${API_URL}/api/v1/remove-book-from-wishlist`, {}, { headers });
+      const response = await api.put(`/remove-book-from-wishlist`, {}, { headers });
       setAlertMessage(response.data.message);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);

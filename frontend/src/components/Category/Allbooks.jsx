@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import axios from "axios";
 import BookCard from "../BookCard/BookCard";
 import Loader from "../Loader/Loader";
+import api from '../../lib/axios';
 
-const API_URL = "http://localhost:1000";
 
 const Allbooks = () => {
   const [Book, setBook] = useState(null);
@@ -11,7 +11,7 @@ const Allbooks = () => {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/v1/get-all-books`);
+        const response = await api.get("/get-all-books");
         setBook(response.data.data);
       } catch (error) {
         console.error("Error fetching books:", error);

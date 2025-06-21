@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
+import api from "../../../lib/axios";
 
-const API_URL = "http://localhost:1000";
 
 export default function MonthlyStats() {
   const [analytics, setAnalytics] = useState(null);
@@ -13,7 +13,7 @@ export default function MonthlyStats() {
   useEffect(() => {
     const fetchMonthlyAnalytics = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/v1/monthly-analytics`);
+        const response = await api.get(`/monthly-analytics`);
         setAnalytics(response.data);
       } catch (error) {
         console.error("Error fetching analytics:", error);

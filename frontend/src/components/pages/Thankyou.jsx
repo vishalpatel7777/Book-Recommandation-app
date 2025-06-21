@@ -4,7 +4,7 @@ import "../../assets/thank-you-page/thankyou.css"
 
 const ThankYouPage = () => {
   const handleDownload = () => {
-    // Add your logic for downloading the PDF file here
+ 
     alert("Your PDF download will start soon!");
   };
 

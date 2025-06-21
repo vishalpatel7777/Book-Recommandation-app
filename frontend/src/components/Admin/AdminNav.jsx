@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { updateRoutes } from "../../store/routesSlice";
 import { authActions } from "../../store/auth";
-import BookCard from "../BookCard/BookCard";
-
-const API_URL = "http://localhost:1000";
+import api from "../../lib/axios";
 
 const AdminNavbar = () => {
   const navigate = useNavigate();
@@ -29,7 +27,9 @@ const AdminNavbar = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/v1/get-all-books-search?search=${searchValue}`);
+      const response = await api.get("/get-all-books-search", {
+        params: { search: searchValue },
+      });
       const data = await response.json();
       if (data.status === "success") {
         setBooks(data.data);
@@ -55,14 +55,31 @@ const AdminNavbar = () => {
   return (
     <nav className="navbar fixed top-0 left-0 w-full bg-white z-50 p-4 flex justify-between items-center">
       <div className="logo-container">
-        <img src="../src/assets/home-page/l.png" alt="BookMosaic Logo" className="w-20" />
+        <img
+          src="../src/assets/home-page/l.png"
+          alt="BookMosaic Logo"
+          className="w-20"
+           onClick={() => {
+            navigate("/admin/home");
+          }}
+        />
       </div>
       <ul className="nav-links flex gap-4">
-        <li className="hover:text-blue-500"><Link to="/admin/home">Home</Link></li>
-        <li className="hover:text-blue-500"><Link to="/admin/dashboard">Dashboard</Link></li>
-        <li className="hover:text-blue-500"><Link to="/admin/users">Manage Users</Link></li>
-        <li className="hover:text-blue-500"><Link to="/admin/books">Manage Books</Link></li>
-        <li className="hover:text-blue-500"><Link to="/admin/settings">Settings</Link></li>
+        <li className="hover:text-blue-500">
+          <Link to="/admin/home">Home</Link>
+        </li>
+        <li className="hover:text-blue-500">
+          <Link to="/admin/dashboard">Dashboard</Link>
+        </li>
+        <li className="hover:text-blue-500">
+          <Link to="/admin/users">Manage Users</Link>
+        </li>
+        <li className="hover:text-blue-500">
+          <Link to="/admin/books">Manage Books</Link>
+        </li>
+        <li className="hover:text-blue-500">
+          <Link to="/admin/settings">Settings</Link>
+        </li>
       </ul>
       {isLoggedIn && (
         <div className="flex gap-3">

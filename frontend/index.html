@@ -2,8 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/" href="../Assets/home page/logo.png" />
+    <link rel="icon" type="image/png" href="./src/assets/home-page/l.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Discover BookMosaic - your ultimate platform for exploring, buying, and enjoying books. Shop now and dive into a world of literature!" />
+    <meta name="keywords" content="BookMosaic, buy books online, literature, reading, book store, e-books" />
+    <meta name="author" content="BookMosaic Team" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Open Graph Tags for Social Media -->
+    <meta property="og:title" content="BookMosaic: A Mix of Genres and Recommendations Tailored for Every Reader" />
+    <meta property="og:description" content="Explore a vast collection of books at BookMosaic. Find your next read and shop online today!" />
+    <meta property="og:image" content="./src/assets/home-page/l.png" />
+    <meta property="og:url" content="https://bookmosaic.netlify.app/" />
+    <meta property="og:type" content="website" />
+
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="BookMosaic: A Mix of Genres and Recommendations Tailored for Every Reader" />
+    <meta name="twitter:description" content="Explore a vast collection of books at BookMosaic. Find your next read and shop online today!" />
+    <meta name="twitter:image" content="./src/assets/home-page/l.png" />
+
+    <title>BookMosaic</title>
+
+    <!-- External Stylesheets -->
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&display=swap"
@@ -16,17 +37,17 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
     />
-    <title>BookMosaic</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-  </body>
-  <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
 
-  <script>
-    const cashfree = Cashfree({
-      mode: "sandbox",
-    });
-  </script>
+    <!-- Cashfree SDK -->
+    <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+    <script>
+      const cashfree = Cashfree({
+        mode: "sandbox",
+      });
+    </script>
+  </body>
 </html>

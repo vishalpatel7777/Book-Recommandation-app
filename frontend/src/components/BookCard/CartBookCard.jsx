@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import axios from "axios";
 import { FaStar, FaStarHalfAlt, FaRegStar } from "react-icons/fa";
 import CustomAlert from "../Alert/CustomAlert";
+import api from "../../lib/axios";
 
-const API_URL = "http://localhost:1000";
 
 const CartBookCard = ({ data, cart }) => {
   const headers = {
@@ -17,7 +17,7 @@ const CartBookCard = ({ data, cart }) => {
 
   const handleRemoveBook = async () => {
     try {
-      const response = await axios.put(`${API_URL}/api/v1/remove-book-from-cart`, {}, { headers });
+      const response = await api.put("/remove-book-from-cart", {}, { headers });
       setAlertMessage(response.data.message);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);

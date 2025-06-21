@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import api from "../../lib/axios";
 
-const API_URL = "http://localhost:1000";
 
 export default function AdminProfile() {
   const [admin, setAdmin] = useState(null);
@@ -20,7 +20,7 @@ export default function AdminProfile() {
         if (!headers.id || !headers.authorization) {
           throw new Error("Missing authentication data");
         }
-        const response = await axios.get(`${API_URL}/api/v1/get-admin-profile`, { headers });
+        const response = await api.get(`/get-admin-profile`, { headers });
         setAdmin(response.data);
       } catch (error) {
         console.error("Error fetching admin profile:", error);

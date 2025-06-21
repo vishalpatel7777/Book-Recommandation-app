@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import axios from "axios";
 import { useSelector } from "react-redux";
-
-const API_URL = "http://localhost:1000";
+import api from "../../lib/axios";
 
 const EditBook = () => {
   const location = useLocation();
@@ -16,7 +15,7 @@ const EditBook = () => {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/v1/get-all-books`);
+        const response = await api.get(`/get-all-books`);
         setBooks(response.data.data || []);
       } catch (error) {
         console.error("Error fetching books:", error);

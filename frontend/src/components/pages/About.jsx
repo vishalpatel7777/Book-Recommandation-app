@@ -1,7 +1,12 @@
 import React from "react";
 import "../../assets/about/about.css";
+import { useNavigate } from "react-router-dom";
+import AboutBookBG from "../../assets/about/book1.png";
+import AboutBookShelf from "../../assets/about/book.webp";
 
 const About = () => {
+  
+    const navigate = useNavigate();
   return (
     <main className="relative p-6 pt-[131px] overflow-hidden">
       <section className="text-xl">
@@ -30,16 +35,16 @@ const About = () => {
           📚 <strong>Happy Reading!</strong> 📖💙
         </p>
         <div className="images">
-          <img src="./src/assets/about/book1.png" alt="Books" className="top-image" />
+          <img src={AboutBookBG} alt="Books" className="top-image" />
         </div>
-        <a href="/contact-us">
-          <button className="button-about mb-35 left-160 relative flex">📩 Contact us</button>
-        </a>
+        
+          <button className="button-about mb-35 left-160 relative flex"  onClick={() => navigate("/contact-us")}>📩 Contact us</button>
+      
       </section>
       <footer>
         <div className="bookshelf">
           {Array.from({ length: 27 }).map((_, index) => (
-            <img key={index} src="./src/assets/about/book.webp" alt="Book" className="book-image" />
+            <img key={index} src={AboutBookShelf} alt="Book" className="book-image" />
           ))}
         </div>
       </footer>

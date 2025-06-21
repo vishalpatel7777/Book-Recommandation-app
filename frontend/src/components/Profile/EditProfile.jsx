@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Loader from "../Loader/Loader";
 import CustomAlert from "../Alert/CustomAlert";
+import api from '../../lib/axios';
 
-const API_URL = "http://localhost:1000";
 
 const EditProfile = () => {
   const [showAlert, setShowAlert] = useState(false);
@@ -27,7 +27,7 @@ const EditProfile = () => {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/v1/user-information`, { headers });
+        const response = await api.get("/user-information", { headers });
         setProfileData(response.data);
         setValues({ age: response.data.age || "", genre: response.data.genre || "" });
       } catch (error) {
@@ -40,7 +40,7 @@ const EditProfile = () => {
 
   const submitinfo = async () => {
     try {
-      const response = await axios.put(`${API_URL}/api/v1/update`, Values, { headers });
+      const response = await api.put(`/update`, Values, { headers });
       setAlertMessage(response.data.message);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);

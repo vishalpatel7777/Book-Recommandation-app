@@ -6,9 +6,8 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import CartBookCard from "../BookCard/CartBookCard";
 import CustomAlert from "../Alert/CustomAlert";
+import api from "../../lib/axios";
 
-
-const API_URL = "http://localhost:1000"; // Hardcoded for now
 
 const Cart = () => {
   const [cart, setCart] = useState([]);
@@ -28,7 +27,7 @@ const Cart = () => {
     const fetch = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/api/v1/get-user-cart`, { headers });
+        const response = await api.get(`/get-user-cart`, { headers });
         setCart(response.data.data || []);
       } catch (error) {
         console.error("Error fetching cart:", error);
@@ -38,7 +37,7 @@ const Cart = () => {
       }
     };
     fetch();
-  }, [cart]); // Removed cart from dependencies to avoid infinite loop
+  }, []); // Removed cart from dependencies to avoid infinite loop
 
   useEffect(() => {
     if (cart && cart.length > 0) {
@@ -58,10 +57,9 @@ const Cart = () => {
         paymentMethod: "Online",
       };
 
-      const response = await axios.post(`${API_URL}/api/v1/place-order`, orderData, { headers });
-      console.log("Order placed successfully:", response.data);
-
-      await axios.delete(`${API_URL}/api/v1/clear-cart`, { headers });
+      const response = await api.post(`/place-order`, orderData, { headers });
+   
+      await api.delete(`/clear-cart`, { headers });
       setCart([]);
 
       navigate("/payment-success", { state: { book: cart[0] } });

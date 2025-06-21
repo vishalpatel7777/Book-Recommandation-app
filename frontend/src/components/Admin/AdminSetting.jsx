@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import CustomAlert from "../Alert/CustomAlert";
-
-const API_URL = "http://localhost:1000";
+import api from "../../lib/axios";
 
 export default function AdminSettings() {
   const [showAlert, setShowAlert] = useState(false);
@@ -29,7 +28,7 @@ export default function AdminSettings() {
           id: localStorage.getItem("id"),
           authorization: `Bearer ${localStorage.getItem("token")}`,
         };
-        const response = await axios.get(`${API_URL}/api/v1/get-admin-profile`, { headers });
+        const response = await api.get(`/get-admin-profile`, { headers });
         setAdmin(response.data);
         setFormData({
           fullname: response.data.fullname || "",
@@ -63,13 +62,17 @@ export default function AdminSettings() {
         id: localStorage.getItem("id"),
         authorization: `Bearer ${localStorage.getItem("token")}`,
       };
-      const response = await axios.put(`${API_URL}/api/v1/update-admin-profile`, formData, { headers });
+      const response = await api.put(`/update-admin-profile`, formData, {
+        headers,
+      });
       setAdmin(response.data);
       setAlertMessage("Profile updated successfully!");
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);
     } catch (error) {
-      setAlertMessage(error.response?.data?.message || "Failed to update profile");
+      setAlertMessage(
+        error.response?.data?.message || "Failed to update profile"
+      );
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);
     }
@@ -87,8 +90,8 @@ export default function AdminSettings() {
         id: localStorage.getItem("id"),
         authorization: `Bearer ${localStorage.getItem("token")}`,
       };
-      const response = await axios.put(
-        `${API_URL}/api/v1/update-admin-profile`,
+      const response = await api.put(
+        `/update-admin-profile`,
         { oldPassword: passwords.oldPassword, password: passwords.newPassword },
         { headers }
       );
@@ -96,7 +99,9 @@ export default function AdminSettings() {
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);
     } catch (error) {
-      setAlertMessage(error.response?.data?.message || "Failed to change password");
+      setAlertMessage(
+        error.response?.data?.message || "Failed to change password"
+      );
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);
     }
@@ -108,7 +113,9 @@ export default function AdminSettings() {
   return (
     <div className="relative pt-[121px] overflow-x-hidden p-12 flex justify-center">
       <div className="bg-white p-6 w-[40%] rounded-lg shadow-2xl text-xl">
-        <h2 className="text-3xl font-semibold text-center mb-6">Admin Settings</h2>
+        <h2 className="text-3xl font-semibold text-center mb-6">
+          Admin Settings
+        </h2>
         <div className="flex flex-col items-center">
           <img
             src={formData.image || "https://via.placeholder.com/151"}
@@ -116,12 +123,19 @@ export default function AdminSettings() {
             className="w-[151px] h-[151px] rounded-full object-cover mb-4"
           />
           <input
-            type="text"
-            name="image"
-            value={formData.image}
-            onChange={handleInputChange}
-            placeholder="Enter profile picture URL"
-            className="p-2 border rounded w-full"
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  setFormData({ ...formData, image: reader.result }); // base64 string
+                };
+                reader.readAsDataURL(file);
+              }
+            }}
+            className="w-full p-2 border rounded"
           />
         </div>
         <div className="mt-4">

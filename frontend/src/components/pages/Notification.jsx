@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import CustomAlert from "../Alert/CustomAlert";
-
-const API_URL = "http://localhost:1000"; // Hardcoded for now
+import api from "../../lib/axios";
 
 
 const Notification = () => {
@@ -30,12 +29,12 @@ const Notification = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/api/v1/get-notifications/${userId}`);
+      const res = await api.get(`/get-notifications/${userId}`);
       setNotifications(res.data);
 
       const ratingsData = await Promise.all(
         res.data.map(async (notif) => {
-          const ratingRes = await axios.get(`${API_URL}/api/v1/get-rating/${userId}/${notif.book}`);
+          const ratingRes = await api.get(`/get-rating/${userId}/${notif.book}`);
           return { bookId: notif.book, rate: ratingRes.data?.rate };
         })
       );
@@ -47,7 +46,7 @@ const Notification = () => {
 
       const reviewsData = await Promise.all(
         res.data.map(async (notif) => {
-          const reviewRes = await axios.get(`${API_URL}/api/v1/get-review/${userId}/${notif.book}`);
+          const reviewRes = await api.get(`/get-review/${userId}/${notif.book}`);
           return { bookId: notif.book, review: reviewRes.data?.review };
         })
       );
@@ -67,7 +66,7 @@ const Notification = () => {
   const handleDelete = async (notificationId) => {
     if (!window.confirm("Are you sure you want to delete this notification?")) return;
     try {
-      await axios.delete(`${API_URL}/api/v1/delete-notification/${notificationId}`);
+      await api.delete(`/delete-notification/${notificationId}`);
       setNotifications(notifications.filter((n) => n._id !== notificationId));
     } catch (err) {
       console.error("Error deleting notification:", err);
@@ -85,7 +84,7 @@ const Notification = () => {
       return;
     }
     try {
-      await axios.post(`${API_URL}/api/v1/store-rating`, { book: bookId, rate: rating, user: userId });
+      await api.post(`/store-rating`, { book: bookId, rate: rating, user: userId });
       setRatings((prev) => ({ ...prev, [bookId]: rating }));
       setAlertMessage("Rating submitted successfully!");
       setShowAlert(true);
@@ -111,7 +110,7 @@ const Notification = () => {
       return;
     }
     try {
-      await axios.post(`${API_URL}/api/v1/store-review`, {
+      await api.post(`/store-review`, {
         userId,
         bookId,
         rating: ratings[bookId] || 0,
@@ -174,7 +173,7 @@ const Notification = () => {
                 <div className="flex-1">
                   <h2 className="text-xl font-semibold text-gray-800">{notification.title}</h2>
                   <p className="text-gray-600">by {notification.author || "Unknown"}</p>
-                  <p className="text-gray-600">Price: ${notification.price || "N/A"}</p>
+                  <p className="text-gray-600">Price: ₹{notification.price || "N/A"}</p>
                   <p className="text-green-600 mt-1">You purchased this book! 🎉 {notification.description}</p>
                 </div>
                 <button

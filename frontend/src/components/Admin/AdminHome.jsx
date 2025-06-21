@@ -1,7 +1,5 @@
-import React from "react";
 import { Link } from "react-router-dom";
 
-const API_URL = "http://localhost:1000";
 
 const Adminhome = () => {
   return (
@@ -15,9 +13,9 @@ const Adminhome = () => {
               Let’s manage some books.
             </h1>
             <p className="text-[24px] font-light italic text-gray-600 mb-6">
-              “Hey Boss, hope you're doing great! Wishing you an amazing day as always ✨
+              &quot;Hey Boss, hope you&apos;re doing great! Wishing you an amazing day as always ✨
               <br />
-              Let's make BookMosaic even better! 🎉💫"
+              Let&apos;s make BookMosaic even better! 🎉💫&quot;
             </p>
             <button className="text-[23px] font-medium bg-[#d46a6a] text-black py-2 px-6 rounded-full hover:bg-[#b95353] transition inline-block top-10 relative">
               <Link to="/admin/dashboard">Let’s Do This! 🚀</Link>

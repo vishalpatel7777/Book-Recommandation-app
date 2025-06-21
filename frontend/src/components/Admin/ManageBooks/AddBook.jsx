@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import CustomAlert from "../../Alert/CustomAlert";
-
-const API_URL = "http://localhost:1000";
+import api from "../../../lib/axios";
 
 const AddBook = () => {
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
@@ -63,7 +62,7 @@ const AddBook = () => {
       formData.set("price", parseFloat(values.price));
       if (values.ratings) formData.set("ratings", parseFloat(values.ratings));
 
-      const response = await axios.post(`${API_URL}/api/v1/add-book`, formData, {
+      const response = await api.post(`/add-book`, formData, {
         headers: { ...headers, "Content-Type": "multipart/form-data" },
       });
 

@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Loader from "../../Loader/Loader";
 import CustomAlert from "../../Alert/CustomAlert";
-
-const API_URL = "http://localhost:1000";
+import api from "../../../lib/axios";
 
 const DeleteBook = () => {
   const [books, setBooks] = useState([]);
@@ -15,7 +14,7 @@ const DeleteBook = () => {
   const fetchBooks = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/api/v1/get-all-books-search?search=${search}`);
+      const response = await api.get(`/get-all-books-search?search=${search}`);
       setBooks(response.data?.data || []);
     } catch (error) {
       console.error("Error fetching books:", error);
@@ -39,7 +38,7 @@ const DeleteBook = () => {
     if (!window.confirm("Are you sure you want to delete this book?")) return;
 
     try {
-      await axios.delete(`${API_URL}/api/v1/delete-book`, {
+      await api.delete(`/delete-book`, {
         headers: {
           "Content-Type": "application/json",
           id: userId,

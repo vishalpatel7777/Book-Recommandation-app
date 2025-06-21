@@ -1,15 +1,16 @@
 import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import api from "../../lib/axios";
 
-const API_URL = "http://localhost:1000";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
   const { book } = state || {};
   const userId = localStorage.getItem("id");
-  const securePdfUrl = `${API_URL}${book?.pdf}`;
+  const securePdfUrl = book?.pdf; // Use book.pdf directly, no API_URL prefix
+  console.log("Secure PDF URL:", securePdfUrl); // Log to verify
   const hasRun = useRef(false);
 
   useEffect(() => {
@@ -29,8 +30,7 @@ const PaymentSuccess = () => {
           book: book._id,
           paymentMethod: "Online",
         };
-        console.log("Sending purchase data:", purchaseData);
-        await axios.post(`${API_URL}/api/v1/add-purchase`, purchaseData);
+        await api.post(`/add-purchase`, purchaseData);
         console.log("Purchase recorded successfully");
 
         const notificationData = {
@@ -42,7 +42,7 @@ const PaymentSuccess = () => {
           price: Number(book.price) || 0,
           description: "Purchase Successful!",
         };
-        await axios.post(`${API_URL}/api/v1/add-notification`, notificationData);
+        await api.post(`/add-notification`, notificationData);
         console.log("Notification stored successfully");
 
         if (Notification.permission === "granted") {

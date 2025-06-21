@@ -5,8 +5,12 @@ import { useNavigate } from "react-router-dom";
 import 'react-phone-input-2/lib/style.css';
 import ImageUpload from "../Profile/ImageUpload";
 import CustomAlert from "../Alert/CustomAlert";
+import SignupSitting2 from "../../assets/signup-page/siiting.png";
+import SignupSitting1 from "../../assets/signup-page/sitting.png";
+import SignupBg from "../../assets/signup-page/background.png";
+import SignupBook from "../../assets/signup-page/book-box.png";
+import api from '../../lib/axios';
 
-const API_URL = "http://localhost:1000";
 
 const Signup = () => {
   const [showAlert, setShowAlert] = useState(false);
@@ -21,7 +25,7 @@ const Signup = () => {
     genre: "",
     fullname: "",
     phone: "",
-    image: "",
+    image: "", 
   });
 
   const navigate = useNavigate();
@@ -38,6 +42,15 @@ const Signup = () => {
     setValues({ ...Values, [name]: value });
   };
 
+  const validatePassword = (password) => {
+    const minLength = password.length >= 6;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    return minLength && hasUppercase && hasLowercase && hasNumber && hasSpecial;
+  };
+
   const validateStep1 = async () => {
     if (!Values.fullname || !Values.email || !Values.username || !Values.age || !Values.genre) {
       setAlertMessage("Please fill all the fields in this step");
@@ -47,14 +60,17 @@ const Signup = () => {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/api/v1/validate-step1`, {
+      const response = await api.post(`/validate-step1`, {
         email: Values.email,
         username: Values.username,
+        age: Values.age,
       });
       setAlertMessage(response.data.message);
       setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
-      setStep(2);
+      setTimeout(() => {
+        setShowAlert(false);
+        setStep(2);
+      }, 2000);
     } catch (error) {
       setAlertMessage(error.response?.data?.message || "Error validating Step 1");
       setShowAlert(true);
@@ -62,51 +78,42 @@ const Signup = () => {
     }
   };
 
-  const validateStep2 = async () => {
-    if (!Values.phone || Values.phone.length < 10) {
-      setAlertMessage("Please enter a valid phone number");
+  const validateAndSubmit = async () => {
+   
+    if (!Values.phone || Values.phone.length !== 10 || !/^\d{10}$/.test(Values.phone)) {
+      setAlertMessage("Phone number must be exactly 10 digits.");
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);
       return;
     }
 
-    try {
-      const response = await axios.post(`${API_URL}/api/v1/validate-step2`, {
-        phone: Values.phone,
-      });
-      setAlertMessage(response.data.message);
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
-      setStep(3);
-    } catch (error) {
-      setAlertMessage(error.response?.data?.message || "Error validating Step 2");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
-    }
-  };
-
-  const submit = async () => {
-    if (!Values.password || Values.password.length < 6) {
-      setAlertMessage("Please enter a password of at least 6 characters");
+    if (!Values.password || !validatePassword(Values.password)) {
+      setAlertMessage(
+        "Password must be 6+ characters and include 1 uppercase, 1 lowercase, 1 number, and 1 special character (e.g., !@#$%^&*)"
+      );
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);
       return;
     }
+
     if (Values.password !== Values.confirmPassword) {
       setAlertMessage("Passwords do not match");
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 2000);
       return;
     }
-    if (!Values.image) {
-      setAlertMessage("Please upload a profile image");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
-      return;
-    }
 
     try {
-      const response = await axios.post(`${API_URL}/api/v1/signup`, Values);
+    
+      const step2Response = await api.post(`/validate-step2`, {
+        phone: Values.phone,
+        password: Values.password,
+      });
+      setAlertMessage(step2Response.data.message);
+      setShowAlert(true);
+
+      
+      const signupResponse = await api.post(`/signup`, Values);
       setAlertMessage("Signup successful! Please check your email to verify your account.");
       setShowAlert(true);
       setTimeout(() => {
@@ -123,11 +130,11 @@ const Signup = () => {
   return (
     <main className='all relative min-h-screen pt-[121px]'>
       <div className="background-img">
-        <img src="../src/assets/signup-page/background.png" alt="background-img" className="img" />
+        <img src={SignupBg} alt="background-img" className="img" />
         <div className="signup-header">
-          <img src="../src/assets/signup-page/book-box.png" alt="signup1" className="left" />
+          <img src={SignupBook} alt="signup1" className="left" />
           <h1 className="signup">Signup</h1>
-          <img src="../src/assets/signup-page/book-box.png" alt="signup2" className="right" />
+          <img src={SignupBook} alt="signup2" className="right" />
         </div>
 
         <div className="signup-box">
@@ -151,7 +158,7 @@ const Signup = () => {
             <>
               <div className="phone-input-container">
                 <label htmlFor="phone" className="phone">Phone Number: <span className="country-code">+91</span></label>
-                <input type="tel" name="phone" id="phone" className="input-phone" placeholder="1234567890" value={Values.phone} onChange={change} />
+                <input type="tel" name="phone" id="phone" className="input-phone" placeholder="1234567890" value={Values.phone} onChange={change} maxLength="10" />
               </div>
               <label htmlFor="password" className="password">Password:</label>
               <input
@@ -159,7 +166,7 @@ const Signup = () => {
                 name="password"
                 id="password"
                 className="input-pass"
-                placeholder="Enter your password"
+                placeholder="Enter your password (e.g., Pass@123)"
                 value={Values.password}
                 onChange={change}
                 onFocus={(e) => e.target.type = 'text'}
@@ -180,14 +187,14 @@ const Signup = () => {
               <div className='signup-image relative text-[23px] right-[920px] top-40'>
                 <ImageUpload onImageSelect={(image) => setValues({ ...Values, image })} />
               </div>
-              <button className="signupbtn2" onClick={submit}>Submit</button>
+              <button className="signupbtn2" onClick={validateAndSubmit}>Submit</button> 
             </>
           )}
         </div>
 
         <div className="signup-right">
-          <img src="../src/assets/signup-page/siiting.png" alt="sitting" className="sitting2" />
-          <img src="../src/assets/signup-page/sitting.png" alt="sitting" className="sitting1" />
+          <img src={SignupSitting2} alt="sitting" className="sitting2" />
+          <img src={SignupSitting1} alt="sitting" className="sitting1" />
         </div>
       </div>
 

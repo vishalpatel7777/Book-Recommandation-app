@@ -4,8 +4,7 @@ import axios from "axios";
 import FavoriteBookCard from "../BookCard/FavoriteBookCard";
 import { FaHeart } from "react-icons/fa";
 import "../../assets/wishlist-page/favorite.css";
-
-const API_URL = "http://localhost:1000";
+import api from "../../lib/axios";
 
 const Wishlist = () => {
   const [favorite, setFavorite] = useState([]);
@@ -20,7 +19,7 @@ const Wishlist = () => {
     const fetch = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/api/v1/get-all-wishlist`, { headers });
+        const response = await api.get(`/get-all-wishlist`, { headers });
         setFavorite(response.data.data || []);
       } catch (error) {
         console.error("Error fetching wishlist:", error);
@@ -30,7 +29,7 @@ const Wishlist = () => {
       }
     };
     fetch();
-  }, [favorite]);
+  }, []);
 
   return (
     <>

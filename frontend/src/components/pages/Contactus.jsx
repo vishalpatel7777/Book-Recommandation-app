@@ -22,7 +22,7 @@ function Contactus() {
       )
       .then(
         (result) => {
-          console.log("Email sent:", result.text);
+      
           setIsSent(true);
           setError("");
   

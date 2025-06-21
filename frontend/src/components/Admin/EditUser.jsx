@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import CustomAlert from "../Alert/CustomAlert";
+import api from "../../lib/axios";
 
-const API_URL = "http://localhost:1000";
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
@@ -17,7 +17,7 @@ const ManageUsers = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_URL}/api/v1/all-users`, {
+      const response = await api.get(`/all-users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(response.data);
@@ -34,7 +34,7 @@ const ManageUsers = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`${API_URL}/api/v1/delete-user/${userId}`, {
+      await api.delete(`/delete-user/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(users.filter((user) => user._id !== userId));

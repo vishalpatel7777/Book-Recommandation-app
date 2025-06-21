@@ -24,7 +24,7 @@ router.post("/create-payment", async (req, res) => {
         customer_phone,
       },
       order_meta: {
-        return_url: `https://yourwebsite.com/payment-success?order_id=${order_id}`,
+        return_url: `https://bookmosaic.netlify.app/payment-success?order_id=${order_id}`,
       },
     };
 
@@ -95,7 +95,7 @@ router.post("/webhook", async (req, res) => {
     }
 
     if (type === "PAYMENT_SUCCESS_WEBHOOK" && data?.payment?.payment_status === "SUCCESS") {
-      console.log("Payment successful:", data);
+      console.log("Payment successful");
     }
 
     res.status(200).json({ success: true });

@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import CustomAlert from "../Alert/CustomAlert";
-
-const API_URL = "http://localhost:1000"; // Hardcoded for now
+import api from "../../lib/axios";
 
 
 const ResetPassword = () => {
@@ -24,7 +23,7 @@ const ResetPassword = () => {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/api/v1/reset-password/${token}`, { password });
+      const response = await api.post(`/reset-password/${token}`, { password });
       setAlertMessage(response.data.message);
       setShowAlert(true);
       setTimeout(() => {
