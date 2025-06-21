@@ -99,15 +99,13 @@ router.get("/daily", async (req, res) => {
     const activeUsers = await User.countDocuments({
       lastLogin: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
     });
-    const totalPurchases = await Book.aggregate([
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$purchases", 0] } } },
-  }]);
+    const totalPurchases = await Purchase.countDocuments();
     const totalReviews = await Review.countDocuments();
 
     res.json({
       totalUsers: totalUsers || 0,
       activeUsers: activeUsers || 0,
-      totalPurchases: totalPurchases.length ? totalPurchases[0].total : 0,
+       totalPurchases: totalPurchases || 0,
       totalReviews: totalReviews || 0,
     });
   } catch (error) {

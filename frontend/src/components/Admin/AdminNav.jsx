@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { updateRoutes } from "../../store/routesSlice";
 import { authActions } from "../../store/auth";
+import BookMosaicLogo from "../../assets/home-page/l.png"
 import api from "../../lib/axios";
 
 const AdminNavbar = () => {
@@ -56,7 +57,7 @@ const AdminNavbar = () => {
     <nav className="navbar fixed top-0 left-0 w-full bg-white z-50 p-4 flex justify-between items-center">
       <div className="logo-container">
         <img
-          src="../src/assets/home-page/l.png"
+          src={BookMosaicLogo}
           alt="BookMosaic Logo"
           className="w-20"
            onClick={() => {

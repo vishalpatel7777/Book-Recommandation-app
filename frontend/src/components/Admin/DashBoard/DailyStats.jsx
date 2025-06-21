@@ -11,7 +11,7 @@ export default function DailyStats() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await axios.api("/daily");
+        const response = await api.get("/daily");
         setStats(response.data);
       } catch (err) {
         setError("Failed to load statistics.");
