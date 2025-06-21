@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import Bookshelf from "../../assets/admin/home-page.png"
 
 
 const Adminhome = () => {
@@ -23,7 +24,7 @@ const Adminhome = () => {
           </div>
           <div className="relative top-6 right-40">
             <img
-              src="../../src/assets/admin/home-page.png"
+              src={Bookshelf}
               alt="Bookshelf"
               className="max-w-[500px] h-auto"
             />
