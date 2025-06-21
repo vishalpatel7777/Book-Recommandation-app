@@ -1,8 +1,8 @@
 const express = require("express");
+require("dotenv").config();
 const cors = require("cors");
 const fs = require("fs");
 require("./conn/conn");
-require("dotenv").config();
 
 const app = express();
 const user = require("./routes/user");
@@ -16,7 +16,6 @@ const payment = require("./routes/payment");
 const order = require("./routes/order");
 
 const path = require("path");
-const __dirname = path.resolve();
 
 
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
