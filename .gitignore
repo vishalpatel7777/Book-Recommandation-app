@@ -24,3 +24,10 @@ dist-ssr
 *.sw?
 
 .env
+.env.example
+.qodo
+docs
+scripts
+jobs
+tests
+
