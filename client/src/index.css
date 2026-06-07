@@ -419,3 +419,184 @@ h1, h2, h3, h4, h5, h6 {
   height: 3.75rem;
   width: 100%;
 }
+
+/* ── Unified page layout ── */
+.page-container {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+}
+
+/* Page header band — consistent across Allbooks, Cart, Notification, Authors, Blog */
+.page-header {
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-card);
+  padding: 48px 0 32px;
+}
+
+.page-header h1 {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+  letter-spacing: var(--tracking-snug);
+}
+
+.page-header p {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* ── Empty state (improved) ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  min-height: 40vh;
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--space-16) var(--space-8);
+}
+.empty-state-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-2);
+}
+.empty-state h2 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-family: var(--font-heading);
+}
+.empty-state p {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  max-width: 280px;
+  line-height: var(--leading-relaxed);
+}
+
+/* ── Mobile responsive overrides ── */
+@media (max-width: 640px) {
+  /* Profile sidebar stacks on mobile */
+  .profile-layout {
+    flex-direction: column !important;
+  }
+  .profile-sidebar {
+    width: 100% !important;
+    position: static !important;
+  }
+
+  /* Book grid: 2 cols min on small screens */
+  .book-grid-auto {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Page paddings */
+  .page-container {
+    padding-left: var(--space-4) !important;
+    padding-right: var(--space-4) !important;
+  }
+
+  /* Cart: stack columns */
+  .cart-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Allbooks toolbar wraps */
+  .toolbar-row {
+    flex-wrap: wrap;
+  }
+
+  /* Hero: reduce padding */
+  .hero-section {
+    padding-top: 80px !important;
+    padding-bottom: 40px !important;
+  }
+
+  /* Section spacings */
+  .section-padding {
+    padding-top: var(--space-10) !important;
+    padding-bottom: var(--space-10) !important;
+  }
+
+  /* Auth cards */
+  .auth-card {
+    margin: var(--space-4) !important;
+    padding: var(--space-6) !important;
+  }
+
+  /* Page header title scale */
+  .page-header h1 {
+    font-size: var(--text-2xl) !important;
+  }
+
+  /* Profile: reduce top padding */
+  .page-container[style*="padding-top"] {
+    padding-top: var(--space-6) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Profile layout responsive */
+  .profile-main-layout {
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .profile-layout {
+    flex-direction: column !important;
+  }
+  .profile-sidebar {
+    width: 100% !important;
+    position: static !important;
+  }
+
+  /* Notification center */
+  .notif-container {
+    max-width: 100% !important;
+    padding-left: var(--space-4) !important;
+    padding-right: var(--space-4) !important;
+  }
+
+  /* Book details columns stack */
+  .book-detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: var(--space-8) !important;
+  }
+
+  /* Text: hero h1 scales down */
+  .hero-heading {
+    font-size: clamp(1.8rem, 6vw, 3rem) !important;
+  }
+}
+
+/* ── Lazy-load image placeholder ── */
+img[loading="lazy"] {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+img[loading="lazy"].loaded,
+img:not([loading="lazy"]) {
+  opacity: 1;
+}
+
+/* ── No horizontal scroll on mobile ── */
+body {
+  overflow-x: hidden;
+}
+
+/* ── Smooth anchor scroll ── */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 72px;
+}

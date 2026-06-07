@@ -1,78 +1,136 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
-import { ChevronDownIcon } from "@heroicons/react/24/solid";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, Search, X, HelpCircle } from "lucide-react";
+import { CMS_FAQ } from "../../../store/cmsStore";
 
-const faqs = [
-  {
-    question: "How does BookMosaic recommend books? 🤖",
-    answer: "BookMosaic uses AI/ML algorithms to analyze your reading history, preferences, and trending books to suggest personalized recommendations."
-  },
-  {
-    question: "Is my payment information secure? 🔒",
-    answer: "Yes! We use a secure payment gateway with encryption to ensure that your transactions are safe and private."
-  },
-  {
-    question: "Can I download purchased books as PDFs? 📄",
-    answer: "Absolutely! Once you complete your purchase, you'll get access to download the book in PDF format from your account."
-  },
-  {
-    question: "How do I reset my password? 🔑",
-    answer: "Go to the login page, click on 'Forgot Password', and follow the instructions sent to your registered email."
-  },
-  {
-    question: "Do you offer refunds on book purchases? 💰",
-    answer: "Due to the digital nature of our products, we do not offer refunds. However, if you face any issues, contact our support team."
-  }
-];
+const CATEGORIES = ["All", ...new Set(CMS_FAQ.map((f) => f.category))];
 
-const Faq = () => { // <-- Renamed component
-  const [openIndex, setOpenIndex] = useState(null);
+const FaqItem = ({ faq, isOpen, onToggle }) => (
+  <div
+    style={{
+      background: "var(--bg-card)",
+      border: `1px solid ${isOpen ? "var(--accent-sage-ring)" : "var(--border)"}`,
+      borderRadius: "var(--radius-md)",
+      overflow: "hidden",
+      transition: "border-color 0.15s",
+    }}
+  >
+    <button
+      onClick={onToggle}
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "var(--space-5)",
+        background: isOpen ? "var(--accent-sage-bg)" : "transparent",
+        border: "none",
+        cursor: "pointer",
+        textAlign: "left",
+        gap: "var(--space-4)",
+        transition: "background 0.15s",
+      }}
+    >
+      <span style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-sm)", fontWeight: 600, color: isOpen ? "var(--accent-sage-text)" : "var(--text-primary)", lineHeight: "var(--leading-snug)" }}>
+        {faq.question}
+      </span>
+      <ChevronDown
+        size={15}
+        style={{ color: isOpen ? "var(--accent-sage)" : "var(--text-muted)", transition: "transform 0.25s", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}
+      />
+    </button>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.22 }}
+          style={{ overflow: "hidden" }}
+        >
+          <div style={{ padding: "0 var(--space-5) var(--space-5)", borderTop: `1px solid var(--border-light)` }}>
+            <p style={{ paddingTop: "var(--space-4)", fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: "var(--leading-relaxed)" }}>
+              {faq.answer}
+            </p>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+);
 
-  const toggleFAQ = (index) => {
-    setOpenIndex(openIndex === index ? null : index);
-  };
+const Faq = () => {
+  const [openId, setOpenId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
+
+  const filtered = CMS_FAQ.filter((f) => {
+    if (category !== "All" && f.category !== category) return false;
+    if (search && !f.question.toLowerCase().includes(search.toLowerCase()) && !f.answer.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-gray-100 min-h-screen">
-      <motion.h1
-        className="text-4xl font-bold text-center mb-10 text-gray-800"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        ❓ Frequently Asked Questions
-      </motion.h1>
-      <div className="space-y-4">
-        {faqs.map((faq, index) => (
-          <motion.div
-            key={index}
-            className="bg-white p-5 rounded-lg shadow-md cursor-pointer"
-            onClick={() => toggleFAQ(index)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
+    <div>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
+        <HelpCircle size={16} style={{ color: "var(--accent-sage)" }} />
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-xl)", fontWeight: 600, color: "var(--text-primary)" }}>
+          Frequently Asked Questions
+        </h2>
+      </div>
+      <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", marginBottom: "var(--space-6)" }}>
+        Everything you need to know about BookMosaic.
+      </p>
+
+      {/* Search */}
+      <div style={{ position: "relative", marginBottom: "var(--space-5)" }}>
+        <Search size={13} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search questions…"
+          style={{ width: "100%", paddingLeft: 34, paddingRight: search ? 32 : 12, paddingTop: "0.55rem", paddingBottom: "0.55rem", border: `1px solid var(--border-medium)`, borderRadius: "var(--radius-sm)", background: "var(--bg-page)", color: "var(--text-primary)", fontSize: "var(--text-sm)", fontFamily: "var(--font-body)", outline: "none" }}
+          onFocus={(e) => { e.target.style.borderColor = "var(--accent-sage)"; }}
+          onBlur={(e) => { e.target.style.borderColor = "var(--border-medium)"; }}
+        />
+        {search && (
+          <button onClick={() => setSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 2 }}>
+            <X size={12} />
+          </button>
+        )}
+      </div>
+
+      {/* Category pills */}
+      <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-6)" }}>
+        {CATEGORIES.map((c) => (
+          <button key={c} onClick={() => setCategory(c)}
+            style={{ padding: "3px 14px", borderRadius: "var(--radius-full)", border: `1px solid ${category === c ? "var(--accent-sage)" : "var(--border)"}`, background: category === c ? "var(--accent-sage-bg)" : "transparent", color: category === c ? "var(--accent-sage-text)" : "var(--text-secondary)", fontSize: "var(--text-xs)", fontWeight: category === c ? 600 : 400, cursor: "pointer", transition: "all 0.12s", fontFamily: "var(--font-body)" }}
           >
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">{faq.question}</h2>
-              <ChevronDownIcon
-                className={`h-6 w-6 text-gray-600 transition-transform duration-300 ${openIndex === index ? "rotate-180" : ""}`}
-              />
-            </div>
-            {openIndex === index && (
-              <motion.p
-                className="mt-3 text-gray-700"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                transition={{ duration: 0.3 }}
-              >
-                {faq.answer}
-              </motion.p>
-            )}
-          </motion.div>
+            {c}
+          </button>
         ))}
       </div>
+
+      {/* FAQ list */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+        {filtered.map((faq) => (
+          <FaqItem
+            key={faq.id}
+            faq={faq}
+            isOpen={openId === faq.id}
+            onToggle={() => setOpenId(openId === faq.id ? null : faq.id)}
+          />
+        ))}
+      </div>
+
+      {filtered.length === 0 && (
+        <div style={{ textAlign: "center", padding: "var(--space-10) 0" }}>
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>No results for "{search}". Try a different search.</p>
+        </div>
+      )}
     </div>
   );
 };
 
-export default Faq; // <-- Renamed export
+export default Faq;

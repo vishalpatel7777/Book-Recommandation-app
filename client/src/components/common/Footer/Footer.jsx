@@ -29,7 +29,7 @@ function Footer() {
           <div>
             <h4 className="type-label" style={{ marginBottom: "var(--space-4)" }}>Discover</h4>
             <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-              {[["Home", "/home"], ["Browse Books", "/category"], ["Library", "/allbooks"], ["About", "/about"]].map(([text, path]) => (
+              {[["Home", "/"], ["Browse Books", "/category"], ["Library", "/allbooks"], ["About", "/about"]].map(([text, path]) => (
                 <li key={path}>
                   <Link to={path}
                     style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", textDecoration: "none", transition: "var(--transition-color)" }}

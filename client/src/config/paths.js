@@ -43,10 +43,9 @@ const PATHS = {
   ADMIN_USERS: "/admin/users",
   ADMIN_PROFILE: "/admin/profile",
   ADMIN_SETTINGS: "/admin/settings",
-  ADMIN_ORDERS: "/admin/orders",
   ADMIN_CMS: "/admin/cms",
   ADMIN_ADD_BOOK: "/admin/books/add-book",
-  ADMIN_EDIT_BOOK: (id) => `/admin/edit-book/${id}`,
+  ADMIN_EDIT_BOOK: (id) => `/admin/books/edit-book/${id}`,
 
   // Fallback
   NOT_FOUND: "/*",

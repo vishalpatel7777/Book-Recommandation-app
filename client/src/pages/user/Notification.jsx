@@ -136,8 +136,8 @@ const Notification = () => {
     <div style={{ minHeight: "100vh", background: "var(--bg-page)" }}>
 
       {/* ── HEADER ── */}
-      <section style={{ borderBottom: `1px solid var(--border-light)`, background: "var(--bg-card)", padding: "48px 0 32px" }}>
-        <div className="max-w-2xl mx-auto px-6 sm:px-8">
+      <section className="page-header">
+        <div className="page-container" style={{ maxWidth: "768px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
             <div style={{
               width: 36,
@@ -166,27 +166,15 @@ const Notification = () => {
         </div>
       </section>
 
-      <div className="max-w-2xl mx-auto px-6 sm:px-8 py-8">
+      <div style={{ maxWidth: "768px", margin: "0 auto", padding: "var(--space-8) var(--space-6)" }}>
         {!notifications.length ? (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="empty-state">
-            <div style={{
-              width: 64,
-              height: 64,
-              borderRadius: "var(--radius-full)",
-              background: "var(--bg-surface)",
-              border: `1px solid var(--border)`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
+            <div className="empty-state-icon">
               <Bell size={24} style={{ color: "var(--text-muted)" }} />
             </div>
-            <div>
-              <h2>Nothing here yet</h2>
-              <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", marginTop: "var(--space-2)", maxWidth: "260px" }}>
-                When you purchase a book, it will appear here for rating and review.
-              </p>
-            </div>
+            <h2>Nothing here yet</h2>
+            <p>When you purchase a book, it will appear here for rating and review.</p>
+            <a href="/allbooks" className="btn btn-secondary" style={{ marginTop: "var(--space-2)", textDecoration: "none" }}>Browse books</a>
           </motion.div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookHeart } from "lucide-react";
 import Loader from "../../common/Loader/Loader";
@@ -29,9 +30,13 @@ const Wishlist = () => {
       </div>
 
       {!wishlist.length ? (
-        <div style={{ padding: "var(--space-12) 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)" }}>
-          <BookHeart size={28} style={{ color: "var(--border-medium)" }} />
-          <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>No books saved yet.</p>
+        <div className="empty-state" style={{ minHeight: "30vh" }}>
+          <div className="empty-state-icon">
+            <BookHeart size={24} style={{ color: "var(--accent-danger)", opacity: 0.6 }} />
+          </div>
+          <h2>No saved books yet</h2>
+          <p>Heart a book to save it here for later.</p>
+          <Link to="/allbooks" className="btn btn-secondary" style={{ marginTop: "var(--space-2)", textDecoration: "none" }}>Browse Library</Link>
         </div>
       ) : (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 sm:grid-cols-3 gap-3">

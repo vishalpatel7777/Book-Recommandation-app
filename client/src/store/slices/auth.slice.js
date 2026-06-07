@@ -42,6 +42,8 @@ const authSlice = createSlice({
       state.user = null;
       state.error = null;
       localStorage.removeItem("user");
+      localStorage.removeItem("bm_cart");
+      localStorage.removeItem("bm_wishlist");
     },
   },
 });

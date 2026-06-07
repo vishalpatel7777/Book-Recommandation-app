@@ -1,5 +1,7 @@
 import { lazy } from 'react';
+import { Navigate } from 'react-router-dom';
 import PATHS from '../config/paths';
+import RequireAuth from '../components/common/Guards/RequireAuth';
 
 const Home = lazy(() => import('../components/books/Home/Home'));
 const About = lazy(() => import('../pages/user/About'));
@@ -24,24 +26,29 @@ const EditProfile = lazy(() => import('../components/user/Profile/EditProfile'))
 
 const userRoutes = [
   { path: PATHS.HOME, element: <Home /> },
-  { path: '/home', element: <Home /> },
+  { path: '/home', element: <Navigate to="/" replace /> },
   { path: PATHS.ABOUT, element: <About /> },
-  { path: PATHS.THANKYOU, element: <Thankyou /> },
-  { path: '/wishlist/:id', element: <Mainwishlist /> },
-  { path: PATHS.WISHLIST, element: <Favorite /> },
+  { path: PATHS.THANKYOU, element: <RequireAuth><Thankyou /></RequireAuth> },
+  { path: '/wishlist/:id', element: <RequireAuth><Mainwishlist /></RequireAuth> },
+  { path: PATHS.WISHLIST, element: <RequireAuth><Favorite /></RequireAuth> },
   { path: PATHS.CONTACT, element: <ContactUs /> },
-  { path: PATHS.NOTIFICATION, element: <Notification /> },
-  { path: PATHS.CART, element: <Cart /> },
-  { path: PATHS.WELCOME, element: <Welcome /> },
-  { path: '/buy/:id', element: <Buy /> },
-  { path: PATHS.CHECKOUT, element: <Checkout /> },
-  { path: PATHS.PAYMENT_SUCCESS, element: <PaymentSuccess /> },
+  { path: PATHS.NOTIFICATION, element: <RequireAuth><Notification /></RequireAuth> },
+  { path: PATHS.CART, element: <RequireAuth><Cart /></RequireAuth> },
+  { path: PATHS.WELCOME, element: <RequireAuth><Welcome /></RequireAuth> },
+  { path: '/buy/:id', element: <RequireAuth><Buy /></RequireAuth> },
+  { path: PATHS.CHECKOUT, element: <RequireAuth><Checkout /></RequireAuth> },
+  { path: PATHS.PAYMENT_SUCCESS, element: <RequireAuth><PaymentSuccess /></RequireAuth> },
+  { path: '/authors', element: <BestAuthor /> },
+  { path: '/blog', element: <Blog /> },
   {
     path: PATHS.PROFILE,
-    element: <Profile />,
+    element: <RequireAuth><Profile /></RequireAuth>,
     children: [
       { index: true, element: <Wishlist /> },
       { path: 'wishlist', element: <Wishlist /> },
+      { path: 'reading-activity', element: <></> },
+      { path: 'notifications', element: <></> },
+      { path: 'about', element: <></> },
       { path: 'terms', element: <Terms /> },
       { path: 'privacy-policy', element: <Privacy /> },
       { path: 'blog', element: <Blog /> },

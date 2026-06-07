@@ -6,14 +6,14 @@ function Welcome() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const timer = setTimeout(() => navigate("/home"), 3500);
+    const timer = setTimeout(() => navigate("/"), 3500);
     return () => clearTimeout(timer);
   }, [navigate]);
 
   return (
     <div
       style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--bg-dark)", cursor: "pointer" }}
-      onClick={() => navigate("/home")}
+      onClick={() => navigate("/")}
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -39,7 +39,7 @@ function Welcome() {
           transition={{ delay: 0.8, duration: 0.5 }}
         >
           <button
-            onClick={(e) => { e.stopPropagation(); navigate("/home"); }}
+            onClick={(e) => { e.stopPropagation(); navigate("/"); }}
             style={{
               padding: "var(--space-3) var(--space-8)", borderRadius: "var(--radius-sm)",
               fontSize: "var(--text-sm)", fontWeight: 500,

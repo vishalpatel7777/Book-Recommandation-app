@@ -3,6 +3,7 @@ import App from '../App';
 import MainLayout from '../layouts/MainLayout';
 import AdminLayout from '../layouts/AdminLayout';
 import RequireAdmin from '../components/common/Guards/RequireAdmin';
+import NotFound from '../pages/user/NotFound';
 import authRoutes from './auth.routes';
 import bookRoutes from './book.routes';
 import userRoutes from './user.routes';
@@ -27,7 +28,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/*',
-        element: <div>404 Page Not Found</div>,
+        element: <NotFound />,
       },
     ],
   },

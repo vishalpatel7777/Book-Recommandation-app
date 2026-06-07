@@ -40,7 +40,7 @@ const Thankyou = () => {
             <button onClick={handleDownload} className="btn btn-primary w-full flex items-center justify-center gap-2">
               <Download size={14} /> Download PDF
             </button>
-            <Link to="/home" style={{ textDecoration: "none" }}>
+            <Link to="/" style={{ textDecoration: "none" }}>
               <button className="btn btn-secondary w-full flex items-center justify-center gap-2">
                 Continue Browsing <ArrowRight size={13} />
               </button>

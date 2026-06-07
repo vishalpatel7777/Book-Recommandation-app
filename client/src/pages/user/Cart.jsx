@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, ArrowRight, Package, Gift, BookOpen, Shield, ChevronRight, Sparkles } from "lucide-react";
+import { ShoppingCart, ArrowRight, Package, Gift, BookOpen, Shield, ChevronRight, Tag, X, Check, AlertCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Loader from "../../components/common/Loader/Loader";
 import CartBookCard from "../../components/books/Card/CartBookCard";
 import CustomAlert from "../../components/common/Alert/CustomAlert";
 import api from "../../services/axios";
-
-const BUNDLE_SUGGESTIONS = [
-  { icon: "📚", label: "Reading Bundle", desc: "3 books · Save 10%", tag: "Popular" },
-  { icon: "🎁", label: "Gift Set",        desc: "Beautifully wrapped", tag: "New" },
-];
+import { CMS_COUPONS, CMS_PROMOTIONS } from "../../store/cmsStore";
 
 const Cart = () => {
   const [cart, setCart]             = useState([]);
@@ -19,6 +15,10 @@ const Cart = () => {
   const [total, setTotal]           = useState(0);
   const [showAlert, setShowAlert]   = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
   const navigate = useNavigate();
   const userId = useSelector((s) => s.auth.user?.id ?? null);
 
@@ -35,9 +35,42 @@ const Cart = () => {
     })();
   }, []);
 
+  const subtotal = cart.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+  const discount = appliedCoupon
+    ? appliedCoupon.type === "flat"
+      ? Math.min(appliedCoupon.value, subtotal)
+      : Math.min((subtotal * appliedCoupon.value) / 100, appliedCoupon.maxDiscount || Infinity)
+    : 0;
+
   useEffect(() => {
-    setTotal(cart.reduce((acc, item) => acc + (item.price || 0), 0).toFixed(2));
-  }, [cart]);
+    setTotal((subtotal - discount).toFixed(2));
+  }, [cart, appliedCoupon]);
+
+  const applyCoupon = () => {
+    setCouponError("");
+    setCouponLoading(true);
+    setTimeout(() => {
+      const found = CMS_COUPONS.find((c) => c.code.toUpperCase() === couponCode.trim().toUpperCase());
+      if (!found) {
+        setCouponError("Invalid coupon code.");
+        setCouponLoading(false);
+        return;
+      }
+      if (subtotal < (found.min || 0)) {
+        setCouponError(`Minimum order ₹${found.min} required.`);
+        setCouponLoading(false);
+        return;
+      }
+      setAppliedCoupon(found);
+      setCouponLoading(false);
+    }, 600);
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+  };
 
   const handleOrder = async () => {
     try {
@@ -45,6 +78,9 @@ const Cart = () => {
         user: userId,
         book: cart.map((b) => b._id),
         paymentMethod: "Online",
+        coupon: appliedCoupon?.code,
+        discount,
+        total: Number(total),
       };
       const res = await api.post("/add-purchase", orderData);
       await api.delete("/clear-cart");
@@ -70,17 +106,7 @@ const Cart = () => {
       <div style={{ minHeight: "100vh", background: "var(--bg-page)" }}>
         <div className="max-w-2xl mx-auto px-6 py-20 text-center">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-            <div style={{
-              width: 72,
-              height: 72,
-              borderRadius: "var(--radius-full)",
-              background: "var(--bg-surface)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto var(--space-6)",
-              border: `1px solid var(--border)`,
-            }}>
+            <div style={{ width: 72, height: 72, borderRadius: "var(--radius-full)", background: "var(--bg-surface)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto var(--space-6)", border: `1px solid var(--border)` }}>
               <ShoppingCart size={28} style={{ color: "var(--text-muted)" }} />
             </div>
             <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-2xl)", fontWeight: 600, color: "var(--text-primary)", marginBottom: "var(--space-3)" }}>
@@ -91,27 +117,13 @@ const Cart = () => {
             </p>
             <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "center" }}>
               <Link to="/category" style={{ textDecoration: "none" }}>
-                <button className="btn btn-primary flex items-center gap-2">
-                  Browse books <ArrowRight size={14} />
-                </button>
+                <button className="btn btn-primary flex items-center gap-2">Browse books <ArrowRight size={14} /></button>
               </Link>
               <Link to="/wishlist" style={{ textDecoration: "none" }}>
                 <button className="btn btn-secondary">My Wishlist</button>
               </Link>
             </div>
-
-            {/* Gift hint */}
-            <div style={{
-              marginTop: "var(--space-12)",
-              padding: "var(--space-5)",
-              background: "var(--bg-card)",
-              border: `1px solid var(--border)`,
-              borderRadius: "var(--radius-md)",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-4)",
-              textAlign: "left",
-            }}>
+            <div style={{ marginTop: "var(--space-12)", padding: "var(--space-5)", background: "var(--bg-card)", border: `1px solid var(--border)`, borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", gap: "var(--space-4)", textAlign: "left" }}>
               <Gift size={20} style={{ color: "var(--accent-amber)", flexShrink: 0 }} />
               <div>
                 <p style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--text-primary)" }}>Looking for a gift?</p>
@@ -124,22 +136,30 @@ const Cart = () => {
     );
   }
 
+  const activeBanner = CMS_PROMOTIONS.find((p) => p.type === "Banner");
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-page)" }}>
 
       {/* ── HEADER ── */}
-      <section style={{ padding: "48px 0 0", borderBottom: `1px solid var(--border-light)` }}>
-        <div className="max-w-5xl mx-auto px-6 sm:px-8 pb-6">
-          <h1 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-3xl)", fontWeight: 600, color: "var(--text-primary)", marginBottom: "var(--space-1)" }}>
-            Your Basket
-          </h1>
-          <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
-            {cart.length} item{cart.length !== 1 ? "s" : ""} · Free delivery on all orders
-          </p>
+      <section className="page-header">
+        <div className="page-container" style={{ maxWidth: "960px" }}>
+          <h1>Your Basket</h1>
+          <p>{cart.length} item{cart.length !== 1 ? "s" : ""} · Free delivery on all orders</p>
         </div>
       </section>
 
-      <div className="max-w-5xl mx-auto px-6 sm:px-8 py-10">
+      {/* ── CMS PROMO BANNER ── */}
+      {activeBanner && (
+        <div style={{ background: "var(--accent-sage-bg)", borderBottom: `1px solid var(--accent-sage-ring)`, padding: "10px var(--space-6)", display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--space-3)" }}>
+          <Tag size={12} style={{ color: "var(--accent-sage)" }} />
+          <p style={{ fontSize: "var(--text-xs)", color: "var(--accent-sage-text)", fontWeight: 500 }}>
+            {activeBanner.name} — Save {activeBanner.discount} · Use code: <strong>{CMS_COUPONS[0]?.code || "SUMMER20"}</strong>
+          </p>
+        </div>
+      )}
+
+      <div className="page-container" style={{ maxWidth: "960px", paddingTop: "var(--space-10)", paddingBottom: "var(--space-10)" }}>
         <div className="grid lg:grid-cols-3 gap-8 items-start">
 
           {/* ── ITEMS ── */}
@@ -159,53 +179,73 @@ const Cart = () => {
               </AnimatePresence>
             </div>
 
-            {/* Bundle suggestions */}
-            <div style={{ marginTop: "var(--space-8)" }}>
+            {/* ── COUPON ── */}
+            <div style={{ marginTop: "var(--space-8)", padding: "var(--space-5)", background: "var(--bg-card)", border: `1px solid var(--border)`, borderRadius: "var(--radius-md)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
-                <Sparkles size={12} style={{ color: "var(--accent-amber)" }} />
-                <p style={{ fontSize: "var(--text-xs)", fontWeight: 600, letterSpacing: "var(--tracking-wider)", textTransform: "uppercase", color: "var(--text-muted)" }}>You might also like</p>
+                <Tag size={13} style={{ color: "var(--accent-sage)" }} />
+                <p style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--text-primary)" }}>Apply Coupon</p>
               </div>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {BUNDLE_SUGGESTIONS.map((s) => (
-                  <div key={s.label} style={{
-                    padding: "var(--space-4)",
-                    background: "var(--bg-card)",
-                    border: `1px solid var(--border)`,
-                    borderRadius: "var(--radius-md)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-3)",
-                    cursor: "pointer",
-                    transition: "var(--transition)",
-                  }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent-sage)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
-                  >
-                    <span style={{ fontSize: "1.5rem" }}>{s.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                        <p style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--text-primary)" }}>{s.label}</p>
-                        <span style={{ fontSize: "0.6rem", padding: "1px 6px", borderRadius: "var(--radius-full)", background: "var(--accent-sage-bg)", color: "var(--accent-sage-dark)", fontWeight: 600 }}>{s.tag}</span>
-                      </div>
-                      <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{s.desc}</p>
-                    </div>
-                    <ChevronRight size={14} style={{ color: "var(--text-muted)" }} />
+
+              {!appliedCoupon ? (
+                <>
+                  <div style={{ display: "flex", gap: "var(--space-3)" }}>
+                    <input
+                      value={couponCode}
+                      onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(""); }}
+                      placeholder="Enter coupon code"
+                      onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                      style={{ flex: 1, padding: "0.55rem 0.875rem", border: `1px solid ${couponError ? "var(--accent-danger)" : "var(--border-medium)"}`, borderRadius: "var(--radius-sm)", background: "var(--bg-page)", color: "var(--text-primary)", fontSize: "var(--text-sm)", fontFamily: "var(--font-body)", outline: "none", letterSpacing: "0.05em", textTransform: "uppercase" }}
+                      onFocus={(e) => { e.target.style.borderColor = "var(--accent-sage)"; }}
+                      onBlur={(e) => { e.target.style.borderColor = couponError ? "var(--accent-danger)" : "var(--border-medium)"; }}
+                    />
+                    <button
+                      onClick={applyCoupon}
+                      disabled={!couponCode.trim() || couponLoading}
+                      className="btn btn-primary"
+                      style={{ minWidth: 80, fontSize: "var(--text-sm)" }}
+                    >
+                      {couponLoading ? "…" : "Apply"}
+                    </button>
                   </div>
-                ))}
-              </div>
+                  {couponError && (
+                    <p style={{ fontSize: "var(--text-xs)", color: "var(--accent-danger)", marginTop: "var(--space-2)", display: "flex", alignItems: "center", gap: 4 }}>
+                      <AlertCircle size={11} /> {couponError}
+                    </p>
+                  )}
+                  {/* Hint available coupons */}
+                  {CMS_COUPONS.length > 0 && (
+                    <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginTop: "var(--space-3)" }}>
+                      {CMS_COUPONS.slice(0, 3).map((c) => (
+                        <button key={c.code} onClick={() => { setCouponCode(c.code); setCouponError(""); }}
+                          style={{ padding: "2px 10px", borderRadius: "var(--radius-full)", border: `1px dashed var(--accent-sage-ring)`, background: "var(--accent-sage-bg)", color: "var(--accent-sage-text)", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)", letterSpacing: "0.04em" }}>
+                          {c.code}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-3) var(--space-4)", background: "var(--accent-sage-bg)", border: `1px solid var(--accent-sage-ring)`, borderRadius: "var(--radius-sm)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                    <div style={{ width: 24, height: 24, borderRadius: "50%", background: "var(--accent-sage)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Check size={12} style={{ color: "#fff" }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--accent-sage-text)" }}>{appliedCoupon.code}</p>
+                      <p style={{ fontSize: "var(--text-xs)", color: "var(--accent-sage)", marginTop: 1 }}>
+                        {appliedCoupon.type === "flat" ? `₹${appliedCoupon.value} off` : `${appliedCoupon.value}% off`} applied
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={removeCoupon} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent-sage)", padding: 4 }}>
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Gift recommendation */}
-            <div style={{
-              marginTop: "var(--space-6)",
-              padding: "var(--space-5)",
-              background: "var(--bg-surface)",
-              border: `1px solid var(--border-light)`,
-              borderRadius: "var(--radius-md)",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-4)",
-            }}>
+            {/* Gift note */}
+            <div style={{ marginTop: "var(--space-4)", padding: "var(--space-4) var(--space-5)", background: "var(--bg-surface)", border: `1px solid var(--border-light)`, borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
               <Gift size={18} style={{ color: "var(--accent-amber)", flexShrink: 0 }} />
               <div>
                 <p style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--text-primary)" }}>Sending as a gift?</p>
@@ -216,13 +256,7 @@ const Cart = () => {
 
           {/* ── ORDER SUMMARY ── */}
           <div className="sticky top-24 space-y-3">
-            <div style={{
-              background: "var(--bg-card)",
-              border: `1px solid var(--border)`,
-              borderRadius: "var(--radius-md)",
-              padding: "var(--space-6)",
-              boxShadow: "var(--shadow-card)",
-            }}>
+            <div style={{ background: "var(--bg-card)", border: `1px solid var(--border)`, borderRadius: "var(--radius-md)", padding: "var(--space-6)", boxShadow: "var(--shadow-card)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-5)" }}>
                 <Package size={14} style={{ color: "var(--accent-sage)" }} />
                 <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-base)", fontWeight: 600, color: "var(--text-primary)" }}>Order Summary</h2>
@@ -231,8 +265,16 @@ const Cart = () => {
               <div className="space-y-3 mb-5">
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--text-sm)" }}>
                   <span style={{ color: "var(--text-muted)" }}>Subtotal ({cart.length} items)</span>
-                  <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>₹{total}</span>
+                  <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>₹{subtotal.toFixed(2)}</span>
                 </div>
+                {appliedCoupon && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--text-sm)" }}>
+                    <span style={{ color: "var(--accent-sage)", display: "flex", alignItems: "center", gap: 4 }}>
+                      <Tag size={11} /> {appliedCoupon.code}
+                    </span>
+                    <span style={{ color: "var(--accent-sage)", fontWeight: 500 }}>−₹{discount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--text-sm)" }}>
                   <span style={{ color: "var(--text-muted)" }}>Delivery</span>
                   <span style={{ color: "var(--accent-sage)", fontWeight: 500 }}>Free</span>
@@ -243,20 +285,12 @@ const Cart = () => {
                 </div>
               </div>
 
-              <button
-                onClick={handleOrder}
-                className="btn btn-primary w-full flex items-center justify-center gap-2"
-                style={{ padding: "0.75rem" }}
-              >
+              <button onClick={handleOrder} className="btn btn-primary w-full flex items-center justify-center gap-2" style={{ padding: "0.75rem" }}>
                 Place Order <ArrowRight size={14} />
               </button>
 
-              {/* Trust signals */}
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
-                {[
-                  [Shield, "SSL encrypted checkout"],
-                  [BookOpen, "Digital delivery included"],
-                ].map(([Icon, text]) => (
+                {[[Shield, "SSL encrypted checkout"], [BookOpen, "Digital delivery included"]].map(([Icon, text]) => (
                   <div key={text} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                     <Icon size={11} style={{ color: "var(--text-muted)" }} />
                     <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{text}</p>
@@ -265,13 +299,7 @@ const Cart = () => {
               </div>
             </div>
 
-            {/* Promo */}
-            <div style={{
-              padding: "var(--space-4)",
-              background: "var(--accent-sage-bg)",
-              border: `1px solid var(--accent-sage-ring)`,
-              borderRadius: "var(--radius-md)",
-            }}>
+            <div style={{ padding: "var(--space-4)", background: "var(--accent-sage-bg)", border: `1px solid var(--accent-sage-ring)`, borderRadius: "var(--radius-md)" }}>
               <p style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--accent-sage-dark)", marginBottom: "var(--space-1)" }}>📖 BookMosaic Member</p>
               <p style={{ fontSize: "var(--text-xs)", color: "var(--accent-sage-dark)", opacity: 0.8 }}>Free delivery on all orders, forever.</p>
             </div>

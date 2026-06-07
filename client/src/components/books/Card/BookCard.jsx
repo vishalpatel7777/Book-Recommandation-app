@@ -1,11 +1,17 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Star, BookOpen } from "lucide-react";
+import { useSelector } from "react-redux";
+import { Star, BookOpen, Heart, ShoppingCart } from "lucide-react";
 
 const BookCard = ({ data, compact = false }) => {
   const [imgErr, setImgErr] = useState(false);
   const rating = Number(data.ratings) || 0;
   const stars  = Math.round(rating);
+
+  const cartIds    = useSelector((s) => s.user.cart);
+  const wishIds    = useSelector((s) => s.user.wishlist);
+  const inCart     = cartIds.includes(data._id);
+  const inWishlist = wishIds.includes(data._id);
 
   if (compact) {
     return (
@@ -33,7 +39,7 @@ const BookCard = ({ data, compact = false }) => {
 
   return (
     <Link to={`/view-book-details/${data._id}`} style={{ textDecoration: "none" }}>
-      <div className="card-book group cursor-pointer">
+      <div className="card-book group cursor-pointer" style={{ position: "relative" }}>
         {/* Cover */}
         <div style={{ height: 232, background: "var(--bg-surface)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
           {!imgErr ? (
@@ -45,8 +51,19 @@ const BookCard = ({ data, compact = false }) => {
               style={{ maxWidth: "85%" }}
             />
           ) : (
-            <BookOpen size={40} style={{ color: "var(--border-medium)", opacity: 0.5 }} />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--space-2)", width: "100%", height: "100%", padding: "var(--space-4)" }}>
+              <div style={{ width: 48, height: 48, borderRadius: "var(--radius-md)", background: "var(--accent-sage-bg)", border: "1px solid var(--accent-sage-ring)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <BookOpen size={22} style={{ color: "var(--accent-sage)", opacity: 0.7 }} />
+              </div>
+              {data.title && (
+                <p style={{ fontSize: "0.65rem", color: "var(--text-muted)", textAlign: "center", lineHeight: "var(--leading-snug)", maxWidth: 100, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
+                  {data.title}
+                </p>
+              )}
+            </div>
           )}
+
+          {/* Genre badge */}
           {data.genre && (
             <span style={{
               position: "absolute",
@@ -63,6 +80,20 @@ const BookCard = ({ data, compact = false }) => {
               {data.genre}
             </span>
           )}
+
+          {/* Status indicators (top-right) */}
+          <div style={{ position: "absolute", top: "var(--space-2)", right: "var(--space-2)", display: "flex", flexDirection: "column", gap: 4 }}>
+            {inWishlist && (
+              <span style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(184,84,80,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Heart size={10} fill="#fff" color="#fff" />
+              </span>
+            )}
+            {inCart && (
+              <span style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(92,122,94,0.9)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ShoppingCart size={10} color="#fff" />
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Info */}

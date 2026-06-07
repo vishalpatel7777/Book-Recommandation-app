@@ -2,34 +2,79 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Heart, ShoppingCart, Bell, X, Menu, BookOpen, Compass, Library } from "lucide-react";
+import { Search, Heart, ShoppingCart, Bell, X, Menu } from "lucide-react";
 import api from "../../../services/axios";
 
 const NAV_LOGGED_OUT = [
-  { path: "/home",     text: "Home" },
+  { path: "/",     text: "Home" },
   { path: "/category", text: "Discover" },
   { path: "/allbooks", text: "Library" },
-  { path: "/about",    text: "About" },
+  { path: "/authors",  text: "Authors" },
+  { path: "/blog",     text: "Blog" },
 ];
 
 const NAV_LOGGED_IN = [
-  { path: "/home",         text: "Home" },
-  { path: "/category",     text: "Discover" },
-  { path: "/allbooks",     text: "Library" },
-  { path: "/profile",      text: "Profile" },
+  { path: "/",     text: "Home" },
+  { path: "/category", text: "Discover" },
+  { path: "/allbooks", text: "Library" },
+  { path: "/authors",  text: "Authors" },
+  { path: "/blog",     text: "Blog" },
+  { path: "/profile",  text: "Profile" },
 ];
 
+function CountBadge({ count }) {
+  if (!count || count < 1) return null;
+  return (
+    <span style={{
+      position: "absolute",
+      top: -4,
+      right: -4,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      background: "var(--accent-sage)",
+      color: "#fff",
+      fontSize: "0.6rem",
+      fontWeight: 700,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "0 3px",
+      lineHeight: 1,
+    }}>
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+const NavIcon = ({ to, label, count, children }) => (
+  <Link
+    to={to}
+    title={label}
+    style={{ padding: "var(--space-1) var(--space-2)", color: "var(--text-secondary)", display: "flex", alignItems: "center", textDecoration: "none", borderRadius: "var(--radius-sm)", transition: "var(--transition-color)", position: "relative" }}
+    onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-primary)"; e.currentTarget.style.background = "var(--bg-surface)"; }}
+    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.background = "transparent"; }}
+  >
+    {children}
+    <CountBadge count={count} />
+  </Link>
+);
+
 const Navbar = () => {
-  const [query, setQuery]         = useState("");
-  const [results, setResults]     = useState([]);
+  const [query, setQuery]           = useState("");
+  const [results, setResults]       = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled]   = useState(false);
+  const [scrolled, setScrolled]     = useState(false);
+
   const isLoggedIn = useSelector((s) => s.auth.isLoggedIn);
-  const location   = useLocation();
-  const searchRef  = useRef(null);
-  const navigate   = useNavigate();
-  const links      = isLoggedIn ? NAV_LOGGED_IN : NAV_LOGGED_OUT;
+  const cartCount  = useSelector((s) => s.user.cart?.length || 0);
+  const wishCount  = useSelector((s) => s.user.wishlist?.length || 0);
+
+  const location  = useLocation();
+  const searchRef = useRef(null);
+  const navigate  = useNavigate();
+  const links     = isLoggedIn ? NAV_LOGGED_IN : NAV_LOGGED_OUT;
 
   useEffect(() => {
     setQuery(""); setResults([]); setSearchOpen(false); setMobileOpen(false);
@@ -95,9 +140,9 @@ const Navbar = () => {
           </button>
 
           {/* Desktop Nav */}
-          <ul className="hidden md:flex items-center gap-6" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          <ul className="hidden md:flex items-center gap-5" style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {links.map((r) => {
-              const active = location.pathname === r.path || location.pathname.startsWith(r.path + "/");
+              const active = location.pathname === r.path || (r.path !== "/" && location.pathname.startsWith(r.path + "/"));
               return (
                 <li key={r.path}>
                   <Link
@@ -219,12 +264,12 @@ const Navbar = () => {
               </AnimatePresence>
             </div>
 
-            {/* Logged-in icons */}
+            {/* Logged-in icons with counts */}
             {isLoggedIn && (
               <div className="flex items-center gap-0.5">
-                <NavIcon to="/wishlist"     label="Wishlist"><Heart      size={17} /></NavIcon>
-                <NavIcon to="/addtocart"    label="Cart"><ShoppingCart   size={17} /></NavIcon>
-                <NavIcon to="/notification" label="Notifications"><Bell  size={17} /></NavIcon>
+                <NavIcon to="/wishlist"     label="Wishlist"       count={wishCount}><Heart size={17} /></NavIcon>
+                <NavIcon to="/addtocart"    label="Cart"           count={cartCount}><ShoppingCart size={17} /></NavIcon>
+                <NavIcon to="/notification" label="Notifications"><Bell size={17} /></NavIcon>
               </div>
             )}
 
@@ -270,21 +315,34 @@ const Navbar = () => {
               className="md:hidden overflow-hidden"
               style={{ borderTop: `1px solid var(--border-light)`, background: "var(--bg-page)" }}
             >
-              <div style={{ padding: "var(--space-4) var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-                {links.map((r) => (
-                  <Link
-                    key={r.path}
-                    to={r.path}
-                    style={{ padding: "var(--space-2) 0", fontSize: "var(--text-sm)", color: "var(--text-secondary)", textDecoration: "none" }}
-                  >
-                    {r.text}
-                  </Link>
-                ))}
+              <div style={{ padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "2px" }}>
+                {links.map((r) => {
+                  const active = location.pathname === r.path || (r.path !== "/" && location.pathname.startsWith(r.path + "/"));
+                  return (
+                    <Link
+                      key={r.path}
+                      to={r.path}
+                      style={{
+                        padding: "var(--space-3) var(--space-3)",
+                        fontSize: "var(--text-sm)",
+                        fontWeight: active ? 500 : 400,
+                        color: active ? "var(--accent-sage-text)" : "var(--text-secondary)",
+                        textDecoration: "none",
+                        borderRadius: "var(--radius-sm)",
+                        background: active ? "var(--accent-sage-bg)" : "transparent",
+                        borderLeft: `2px solid ${active ? "var(--accent-sage)" : "transparent"}`,
+                        display: "block",
+                      }}
+                    >
+                      {r.text}
+                    </Link>
+                  );
+                })}
                 {isLoggedIn && (
-                  <div style={{ paddingTop: "var(--space-3)", marginTop: "var(--space-2)", borderTop: `1px solid var(--border-light)`, display: "flex", gap: "var(--space-3)" }}>
-                    <Link to="/wishlist"     style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", textDecoration: "none" }}>Wishlist</Link>
-                    <Link to="/addtocart"    style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", textDecoration: "none" }}>Cart</Link>
-                    <Link to="/notification" style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", textDecoration: "none" }}>Notifications</Link>
+                  <div style={{ paddingTop: "var(--space-3)", marginTop: "var(--space-2)", borderTop: `1px solid var(--border-light)`, display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+                    <Link to="/wishlist"     style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", textDecoration: "none" }}>Wishlist {wishCount > 0 ? `(${wishCount})` : ""}</Link>
+                    <Link to="/addtocart"    style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", textDecoration: "none" }}>Cart {cartCount > 0 ? `(${cartCount})` : ""}</Link>
+                    <Link to="/notification" style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", textDecoration: "none" }}>Alerts</Link>
                   </div>
                 )}
                 {!isLoggedIn && (
@@ -301,17 +359,5 @@ const Navbar = () => {
     </>
   );
 };
-
-const NavIcon = ({ to, label, children }) => (
-  <Link
-    to={to}
-    title={label}
-    style={{ padding: "var(--space-1) var(--space-2)", color: "var(--text-secondary)", display: "flex", alignItems: "center", textDecoration: "none", borderRadius: "var(--radius-sm)", transition: "var(--transition-color)" }}
-    onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-primary)"; e.currentTarget.style.background = "var(--bg-surface)"; }}
-    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.background = "transparent"; }}
-  >
-    {children}
-  </Link>
-);
 
 export default Navbar;

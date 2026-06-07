@@ -1,4 +1,6 @@
 import React, { Suspense, createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
+import ErrorBoundary from '../components/common/ErrorBoundary/ErrorBoundary';
+import Loader from '../components/common/Loader/Loader';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -556,9 +558,11 @@ const AdminLayout = () => {
             minWidth: 0,
           }}
         >
-          <Suspense fallback={null}>
-            <Outlet />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<Loader />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
