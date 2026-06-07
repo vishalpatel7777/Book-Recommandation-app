@@ -1,30 +1,49 @@
-/**
- * Central Error Handling Middleware.
- * This catches all synchronous and asynchronous errors passed via next(error).
- */
 const errorMiddleware = (err, req, res, next) => {
-    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-    
-    console.error(`❌ [Error Handler] Path: ${req.originalUrl} | Status: ${statusCode} | Message: ${err.message}`);
-    // Log the full stack trace for server-side debugging
-    if (statusCode === 500) {
-        console.error(err.stack); 
-    }
+  let statusCode = res.statusCode !== 200 ? res.statusCode : 500;
+  let message = err.message || "Internal Server Error";
 
-    // Handle specific MongoDB/Mongoose errors if necessary
-    // E.g., Duplicate key error for unique fields
-    if (err.code === 11000) {
-        return res.status(409).json({ 
-            message: "Duplicate entry detected.",
-            error: err.message,
-        });
-    }
+  // Mongoose: invalid ObjectId
+  if (err.name === "CastError" && err.kind === "ObjectId") {
+    statusCode = 400;
+    message = `Invalid ID: ${err.value}`;
+  }
 
-    res.status(statusCode).json({
-        message: err.message,
-        // Only include stack trace if in development mode
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-    });
+  // Mongoose: validation error
+  if (err.name === "ValidationError") {
+    statusCode = 400;
+    const errors = Object.values(err.errors).map((e) => ({
+      field: e.path,
+      message: e.message,
+    }));
+    return res.status(400).json({ message: "Validation failed", errors });
+  }
+
+  // Mongoose: duplicate key
+  if (err.code === 11000) {
+    statusCode = 409;
+    const field = Object.keys(err.keyValue ?? {})[0] ?? "field";
+    message = `${field} already exists.`;
+  }
+
+  // JWT: invalid token
+  if (err.name === "JsonWebTokenError") {
+    statusCode = 401;
+    message = "Invalid token.";
+  }
+
+  // JWT: expired token
+  if (err.name === "TokenExpiredError") {
+    statusCode = 401;
+    message = "Token expired, please log in again.";
+  }
+
+  console.error(`❌ [${req.method}] ${req.originalUrl} → ${statusCode}: ${message}`);
+  if (statusCode === 500) console.error(err.stack);
+
+  res.status(statusCode).json({
+    message,
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+  });
 };
 
 module.exports = { errorMiddleware };

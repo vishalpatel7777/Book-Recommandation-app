@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs"); // Import bcrypt for password hashing
+const bcrypt = require("bcryptjs");
+const { BCRYPT_SALT_ROUNDS } = require("../config/constants");
 
 const userSchema = new mongoose.Schema(
   {
@@ -40,7 +41,7 @@ userSchema.pre("save", async function (next) {
     return next();
   }
   try {
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {

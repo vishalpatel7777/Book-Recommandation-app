@@ -1,193 +1,285 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import Loader from "../../common/Loader/Loader"; // <-- Corrected path
-import { GrLanguage } from "react-icons/gr";
-import { IoIosHeart } from "react-icons/io";
-import { FaCartArrowDown } from "react-icons/fa";
-import { useSelector } from "react-redux";
-import { FaEdit } from "react-icons/fa";
-import { AiFillDelete } from "react-icons/ai";
-import { FaArrowLeft } from "react-icons/fa6";
-import CustomAlert from "../../common/Alert/CustomAlert"; // <-- Corrected path
-import Rating from "../../common/Rating/Rating"; // <-- Import reusable component
-import api from "../../../services/axios"; // <-- Corrected path
+import { motion } from "framer-motion";
+import { ArrowLeft, Heart, ShoppingCart, ExternalLink, Star, ChevronDown, ChevronUp, Edit, Trash2, BookOpen } from "lucide-react";
+import Loader from "../../common/Loader/Loader";
+import CustomAlert from "../../common/Alert/CustomAlert";
+import api from "../../../services/axios";
+import { getBookById } from "../../../services/book.service";
+import { useAuth, useFlashAlert } from "../../../hooks";
+
+const DESCRIPTION_MAX_LENGTH = 280;
 
 const ViewBookDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [Book, setBook] = useState(null);
-  const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
-  // Get role from state.auth.user.role (add ? for safety)
-  const role = useSelector((state) => state.auth.user?.role); 
-  const [showAlert, setShowAlert] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
-  const [showFullDescription, setShowFullDescription] = useState(false);
-
-  // Define max length for truncated description
-  const DESCRIPTION_MAX_LENGTH = 150;
+  const [Book, setBook]       = useState(null);
+  const [showFull, setShowFull] = useState(false);
+  const [imgErr, setImgErr]   = useState(false);
+  const { isLoggedIn, role }  = useAuth();
+  const { showAlert, alertMessage, flashAlert, setShowAlert } = useFlashAlert();
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const response = await api.get(`/get-book-by-id/${id}`);
-        setBook(response.data.data);
-      } catch (error) {
-        console.error("Error fetching book:", error);
-        setBook(null);
-      }
-    };
-    fetch();
+    getBookById(id).then(setBook).catch(() => setBook(null));
   }, [id]);
 
-  const headers = {
-    id: localStorage.getItem("id"),
-    authorization: `Bearer ${localStorage.getItem("token")}`,
-    bookid: id,
-  };
-
   const handleWishlist = async () => {
+    if (!isLoggedIn) { navigate("/login"); return; }
     try {
-      const response = await api.put("/add-to-wishlist", {}, { headers });
-      setAlertMessage(response.data.message);
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
-    } catch (error) {
-      setAlertMessage(error.response?.data?.message || "Failed to add to wishlist");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
+      const res = await api.put("/add-to-wishlist", {}, { headers: { bookid: id } });
+      flashAlert(res.data.message);
+    } catch (err) {
+      flashAlert(err.response?.data?.message || "Failed to add to wishlist");
     }
   };
 
-  const handleAddtocart = async () => {
+  const handleCart = async () => {
+    if (!isLoggedIn) { navigate("/login"); return; }
     try {
-      const response = await api.put("/add-to-cart", {}, { headers });
-      setAlertMessage(response.data.message);
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
-    } catch (error) {
-      setAlertMessage(error.response?.data?.message || "Failed to add to cart");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
+      const res = await api.put("/add-to-cart", {}, { headers: { bookid: id } });
+      flashAlert(res.data.message);
+    } catch (err) {
+      flashAlert(err.response?.data?.message || "Failed to add to cart");
     }
   };
 
-  // renderStars function removed, we now use <Rating />
+  if (!Book) {
+    return (
+      <div className="h-screen flex items-center justify-center" style={{ background: "var(--bg-page)" }}>
+        <Loader />
+      </div>
+    );
+  }
 
-  const getTruncatedDescription = (desc) => {
-    if (!desc) return "";
-    return desc.length > DESCRIPTION_MAX_LENGTH && !showFullDescription
-      ? `${desc.substring(0, DESCRIPTION_MAX_LENGTH)}...`
-      : desc;
-  };
+  const rating     = Number(Book.ratings) || 0;
+  const stars      = Math.round(rating);
+  const desc       = Book.desc || "";
+  const isLong     = desc.length > DESCRIPTION_MAX_LENGTH;
+  const displayDesc = isLong && !showFull ? `${desc.slice(0, DESCRIPTION_MAX_LENGTH)}…` : desc;
+
+  // Show user actions when: logged in and not admin
+  // This fixes the "Buy Now not visible after login" bug — role may be null on first render
+  // but isLoggedIn persists from localStorage, so we also check the user object directly
+  const isUser  = isLoggedIn && role !== "admin";
+  const isAdmin = isLoggedIn && role === "admin";
 
   return (
     <>
-      {Book === null && (
-        <div className="h-screen flex items-center justify-center">
-          <Loader />
-        </div>
-      )}
-      {Book && (
-        <div className="relative pt-[148px] px-12 py-8 flex gap-8 overflow-x-hidden">
-          <FaArrowLeft className="text-2xl" onClick={() => navigate(-1)} />
-          <div className="rounded p-4 h-[80vh] w-2/6 flex items-center justify-center">
-            <img
-              src={Book.image}
-              alt="/"
-              className="h-[500px] shadow-[5px_20px_50px_rgba(0,0,0,0.7)] transform transition-all duration-500 hover:rotate-0 hover:scale-105"
-            />
-          </div>
-          <div className="p-4 w-4/6">
-            <div className="flex flex-row relative left-20 gap-2">
-              <h1 className="text-[34px] text-black font-semibold">
+      <div style={{ minHeight: "100vh", background: "var(--bg-page)" }}>
+        <div className="max-w-5xl mx-auto px-6 sm:px-8 py-10">
+
+          {/* Back */}
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 transition-colors mb-10 group"
+            style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            onMouseEnter={(e) => e.currentTarget.style.color = "var(--text-primary)"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-muted)"}
+          >
+            <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+            Back
+          </button>
+
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="grid lg:grid-cols-2 gap-14 items-start"
+          >
+            {/* Cover */}
+            <div className="flex justify-center">
+              <div style={{
+                background: "var(--bg-parchment)",
+                width: "100%",
+                maxWidth: 360,
+                minHeight: 460,
+                borderRadius: "var(--radius-sm)",
+                boxShadow: "var(--shadow-book)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+              }}>
+                {!imgErr ? (
+                  <motion.img
+                    src={Book.image}
+                    alt={Book.title}
+                    style={{ maxHeight: 420, maxWidth: "80%", objectFit: "contain", filter: "drop-shadow(0 16px 32px rgba(0,0,0,0.2))" }}
+                    onError={() => setImgErr(true)}
+                    whileHover={{ scale: 1.03 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                ) : (
+                  <BookOpen size={64} style={{ color: "var(--border-medium)", opacity: 0.5 }} />
+                )}
+              </div>
+            </div>
+
+            {/* Info */}
+            <div className="flex flex-col">
+              {Book.genre && (
+                <span className="badge badge-sage w-fit mb-5">
+                  {Book.genre}
+                </span>
+              )}
+
+              <h1 style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
+                fontWeight: 600,
+                color: "var(--text-primary)",
+                lineHeight: "var(--leading-snug)",
+                letterSpacing: "var(--tracking-snug)",
+                marginBottom: "var(--space-2)",
+              }}>
                 {Book.title}
               </h1>
-              <p className="text-black text-[34px] font-semibold">
-                By {Book.author}
+              <p style={{ fontSize: "var(--text-base)", color: "var(--text-muted)", marginBottom: "var(--space-5)" }}>
+                by <span style={{ color: "var(--text-secondary)", fontStyle: "italic" }}>{Book.author}</span>
               </p>
-            </div>
-            <div className="border-b-[3px] border-gray-300 top-2 relative w-[870px]"></div>
-            <p className="text-black mt-10 text-2xl">
-              <span className="font-semibold">Genre :</span> {Book.genre}
-            </p>
-            <p className="text-black mt-3 text-2xl">
-              <span className="font-semibold">Subject : </span>
-              {Book.subject}
-            </p>
-            <p className="text-black mt-4 text-2xl">
-              <span className="font-semibold">Description : </span>
-              {getTruncatedDescription(Book.desc)}
-              {Book.desc && Book.desc.length > DESCRIPTION_MAX_LENGTH && (
-                <button
-                  className="text-blue-700 hover:text-blue-600 ml-2 font-medium"
-                  onClick={() => setShowFullDescription(!showFullDescription)}
-                >
-                  {showFullDescription ? "Read Less" : "Read More"}
-                </button>
+
+              {/* Rating */}
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} size={14}
+                      fill={s <= stars ? "var(--accent-gold)" : "none"}
+                      stroke={s <= stars ? "var(--accent-gold)" : "var(--border-medium)"}
+                      strokeWidth={1.5}
+                    />
+                  ))}
+                </div>
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
+                  {rating > 0 ? `${rating.toFixed(1)} / 5` : "No ratings yet"}
+                </span>
+              </div>
+
+              <div style={{ borderTop: `1px solid var(--border-light)`, marginBottom: "var(--space-6)" }} />
+
+              {/* Meta */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", marginBottom: "var(--space-6)" }}>
+                {Book.subject && (
+                  <div style={{ display: "flex", gap: "var(--space-4)", fontSize: "var(--text-sm)" }}>
+                    <span style={{ color: "var(--text-muted)", width: 80, flexShrink: 0, fontSize: "var(--text-xs)", paddingTop: "2px" }}>Subject</span>
+                    <span style={{ color: "var(--text-secondary)" }}>{Book.subject}</span>
+                  </div>
+                )}
+                {Book.language && (
+                  <div style={{ display: "flex", gap: "var(--space-4)", fontSize: "var(--text-sm)" }}>
+                    <span style={{ color: "var(--text-muted)", width: 80, flexShrink: 0, fontSize: "var(--text-xs)", paddingTop: "2px" }}>Language</span>
+                    <span style={{ color: "var(--text-secondary)" }}>{Book.language}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              {desc && (
+                <div style={{ marginBottom: "var(--space-6)" }}>
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: "var(--leading-relaxed)" }}>
+                    {displayDesc}
+                    {isLong && (
+                      <button
+                        onClick={() => setShowFull(!showFull)}
+                        className="inline-flex items-center gap-0.5 ml-1.5 font-medium transition-colors"
+                        style={{ color: "var(--accent-sage)", fontSize: "var(--text-sm)", background: "none", border: "none", cursor: "pointer" }}
+                      >
+                        {showFull ? (<>Less <ChevronUp size={11} /></>) : (<>More <ChevronDown size={11} /></>)}
+                      </button>
+                    )}
+                  </p>
+                </div>
               )}
-            </p>
-            <a
-              href={Book.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-black mt-6 text-2xl flex flex-row items-center justify-start gap-2 text-blue-700 hover:text-blue-600"
-            >
-              <GrLanguage className="flex" />
-              Get more Info
-            </a>
-            <p className="text-black mt-4 text-2xl flex">
-              Rating: &nbsp; <Rating rating={Book.ratings} /> {/* <-- Use component */}
-            </p>
 
-            {isLoggedIn === true && role === "user" && (
-              <div className="gap-10 flex top-50 relative left-80">
-                <div>
+              {/* External link */}
+              {Book.url && (
+                <a
+                  href={Book.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 w-fit mb-6 transition-colors"
+                  style={{ fontSize: "var(--text-sm)", color: "var(--accent-sage)", textDecoration: "none" }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = "var(--accent-sage-dark)"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "var(--accent-sage)"}
+                >
+                  <ExternalLink size={13} /> More information
+                </a>
+              )}
+
+              {/* Price */}
+              <div style={{ marginBottom: "var(--space-8)" }}>
+                <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "var(--tracking-wider)", marginBottom: "var(--space-1)" }}>Price</p>
+                <span style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-4xl)", fontWeight: 600, color: "var(--text-primary)" }}>₹{Book.price}</span>
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", marginLeft: "var(--space-2)" }}>one-time</span>
+              </div>
+
+              {/* ── USER ACTIONS ── */}
+              {isUser && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-3)" }}>
                   <button
-                    className="text-5xl cursor-pointer text-red-500 hover:text-red-700 transition duration-300"
                     onClick={handleWishlist}
+                    className="btn btn-secondary flex items-center gap-2"
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent-danger)"; e.currentTarget.style.color = "var(--accent-danger)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border-medium)"; e.currentTarget.style.color = "var(--text-primary)"; }}
                   >
-                    <IoIosHeart />
+                    <Heart size={14} /> Wishlist
                   </button>
-                </div>
-                <Link to={`/buy/${Book._id}`}>
-                  <button className="w-[165px] h-[59px] bg-[#edb953] rounded-4xl text-2xl">
-                    Buy
-                  </button>
-                </Link>
-                <div className="w-[185px] p-2 h-[59px] bg-[#c15c54] rounded-4xl text-2xl">
                   <button
-                    className="flex flex-row gap-4 pt-1 pl-1.5 justify-center items-center"
-                    onClick={handleAddtocart}
+                    onClick={handleCart}
+                    className="btn btn-secondary flex items-center gap-2"
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent-sage)"; e.currentTarget.style.color = "var(--accent-sage)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border-medium)"; e.currentTarget.style.color = "var(--text-primary)"; }}
                   >
-                    Add to Cart <FaCartArrowDown />
+                    <ShoppingCart size={14} /> Add to Cart
                   </button>
+                  <Link to={`/buy/${Book._id}`} style={{ textDecoration: "none" }}>
+                    <button className="btn btn-primary flex items-center gap-2">
+                      Buy Now
+                    </button>
+                  </Link>
                 </div>
-              </div>
-            )}
+              )}
 
-            {isLoggedIn === true && role === "admin" && (
-              <div className="gap-10 flex top-50 relative left-80">
-                <div className="w-[185px] p-2 h-[59px] bg-[#c15c54] rounded-4xl text-2xl">
-                  <button className="flex flex-row gap-4 pt-1 pl-1.5 justify-center items-center">
-                    <AiFillDelete />
-                  </button>
+              {/* Not logged in — prompt */}
+              {!isLoggedIn && (
+                <div style={{
+                  padding: "var(--space-4) var(--space-5)",
+                  background: "var(--accent-sage-bg)",
+                  border: `1px solid var(--accent-sage-ring)`,
+                  borderRadius: "var(--radius-md)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "var(--space-3)",
+                }}>
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--accent-sage-text)" }}>Sign in to purchase, wishlist, or save this book.</p>
+                  <Link to="/login" style={{ textDecoration: "none" }}>
+                    <button className="btn btn-primary" style={{ fontSize: "var(--text-sm)", padding: "var(--space-2) var(--space-5)" }}>
+                      Sign in
+                    </button>
+                  </Link>
                 </div>
-                <div className="w-[185px] p-2 h-[59px] bg-[#edb953] rounded-4xl text-2xl">
-                  <button className="flex flex-row gap-4 pt-1 pl-1.5 justify-center items-center">
-                    <FaEdit />
-                  </button>
+              )}
+
+              {/* ── ADMIN ACTIONS ── */}
+              {isAdmin && (
+                <div style={{ display: "flex", gap: "var(--space-3)" }}>
+                  <Link to={`/admin/books/edit-book/${Book._id}`} style={{ textDecoration: "none" }}>
+                    <button
+                      className="btn btn-secondary flex items-center gap-2"
+                      onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--accent-amber)"}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--border-medium)"}
+                    >
+                      <Edit size={13} /> Edit Book
+                    </button>
+                  </Link>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </motion.div>
         </div>
-      )}
-      {showAlert && (
-        <CustomAlert
-          message={alertMessage}
-          onClose={() => setShowAlert(false)}
-        />
-      )}
+      </div>
+      {showAlert && <CustomAlert message={alertMessage} onClose={() => setShowAlert(false)} />}
     </>
   );
 };

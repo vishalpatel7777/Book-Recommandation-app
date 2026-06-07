@@ -1,0 +1,60 @@
+:root {
+  /* ── Backgrounds ── */
+  --bg-page:          #FAF8F3;
+  --bg-card:          #FFFFFF;
+  --bg-surface:       #F5F2EC;
+  --bg-surface-alt:   #F0EDE6;
+  --bg-surface-hover: #FDFCF9;
+  --bg-parchment:     #EDE8DF;
+  --bg-navbar:        rgba(250, 248, 243, 0.92);
+  --bg-dark:          #2C2C2C;
+  --bg-dark-alt:      #1C1C1C;
+  --bg-overlay:       rgba(44, 44, 44, 0.50);
+
+  /* ── Accent — sage ── */
+  --accent-sage:      #5C7A5E;
+  --accent-sage-dark: #4A6350;
+  --accent-sage-mid:  #7A9E7C;
+  --accent-sage-bg:   rgba(92, 122, 94, 0.08);
+  --accent-sage-ring: rgba(92, 122, 94, 0.20);
+  --accent-sage-text: #3D5C3F;
+
+  /* ── Accent — amber ── */
+  --accent-amber:     #8B6F47;
+  --accent-amber-dark:#6D5538;
+  --accent-amber-bg:  rgba(139, 111, 71, 0.10);
+
+  /* ── Accent — gold (stars) ── */
+  --accent-gold:      #C6963A;
+  --accent-gold-bg:   rgba(198, 150, 58, 0.10);
+
+  /* ── Danger ── */
+  --accent-danger:    #B85450;
+  --accent-danger-dark:#8F3C39;
+  --accent-danger-bg: rgba(184, 84, 80, 0.08);
+
+  /* ── Info ── */
+  --accent-info:      #5A7A8A;
+
+  /* ── Text ── */
+  --text-primary:     #1C1C1C;
+  --text-secondary:   #5A5A5A;
+  --text-muted:       #8A8A8A;
+  --text-faint:       #A8A29E;
+  --text-placeholder: #B0ABA5;
+  --text-inverse:     #F5F0E8;
+  --text-on-dark:     #F5F2EC;
+
+  /* ── Borders ── */
+  --border-light:     #EDE8DF;
+  --border:           #E8E2D6;
+  --border-medium:    #D8D1C4;
+  --border-focus:     rgba(92, 122, 94, 0.40);
+  --border-danger:    rgba(184, 84, 80, 0.40);
+
+  /* ── Status ── */
+  --success:          #5C7A5E;
+  --warning:          #8B6F47;
+  --danger:           #B85450;
+  --info:             #5A7A8A;
+}

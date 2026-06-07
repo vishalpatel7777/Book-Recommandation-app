@@ -1,23 +1,26 @@
 import { useState, useEffect } from "react";
-// import axios from "axios"; // <-- Unused import removed
-import Loader from "../../common/Loader/Loader"; // <-- Corrected path
-import CustomAlert from "../../common/Alert/CustomAlert"; // <-- Corrected path
-import api from "../../../services/axios"; // <-- Corrected path
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Trash2, BookOpen } from "lucide-react";
+import Loader from "../../common/Loader/Loader";
+import CustomAlert from "../../common/Alert/CustomAlert";
+import api from "../../../services/axios";
 
 const DeleteBook = () => {
   const [books, setBooks] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmId, setConfirmId] = useState(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+
+  const flash = (msg) => { setAlertMessage(msg); setShowAlert(true); setTimeout(() => setShowAlert(false), 2500); };
 
   const fetchBooks = async () => {
     setLoading(true);
     try {
       const response = await api.get(`/get-all-books-search?search=${search}`);
       setBooks(response.data?.data || []);
-    } catch (error) {
-      console.error("Error fetching books:", error);
+    } catch {
       setBooks([]);
     } finally {
       setLoading(false);
@@ -25,98 +28,112 @@ const DeleteBook = () => {
   };
 
   const deleteBook = async (bookId) => {
-    const userId = localStorage.getItem("id");
-    const token = localStorage.getItem("token");
-
-    if (!userId || !token) {
-      setAlertMessage("You must be logged in as an admin to delete books.");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
-      return;
-    }
-
-    if (!window.confirm("Are you sure you want to delete this book?")) return;
-
     try {
       await api.delete(`/delete-book`, {
-        headers: {
-          "Content-Type": "application/json",
-          id: userId,
-          bookid: bookId,
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { bookid: bookId },
       });
-
-      setBooks((prevBooks) => prevBooks.filter((book) => book._id !== bookId));
-      setAlertMessage("Book deleted successfully");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
+      setBooks((prev) => prev.filter((b) => b._id !== bookId));
+      setConfirmId(null);
+      flash("Book deleted successfully");
     } catch (error) {
-      setAlertMessage(error.response?.data?.message || "Failed to delete book");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
+      flash(error.response?.data?.message || "Failed to delete book");
     }
   };
 
-  useEffect(() => {
-    // Fetch books when component mounts and when search changes
-    fetchBooks();
-  }, [search]);
+  useEffect(() => { fetchBooks(); }, [search]);
 
   return (
-    <div className="p-6 text-xl">
-      <h2 className="text-2xl font-bold mb-4">Manage Books</h2>
-      <input
-        type="text"
-        placeholder="Search by book name..."
-        className="border p-2 mb-4 w-full"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-      {loading && (
-        <div className="flex items-center justify-center">
-          <Loader />
-        </div>
-      )}
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="flex items-center gap-2 mb-5">
+        <Trash2 size={14} style={{ color: "var(--accent-danger)" }} />
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "0.95rem", fontWeight: 600, color: "var(--text-primary)" }}>Delete Books</h2>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
+        <input
+          type="text"
+          placeholder="Search by book name..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-9 pr-3 py-2.5 text-sm rounded-sm outline-none transition-all"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+          onFocus={(e) => { e.target.style.borderColor = "var(--accent-sage)"; e.target.style.boxShadow = "0 0 0 2px var(--accent-sage-ring)"; }}
+          onBlur={(e) => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
+        />
+      </div>
+
+      {loading && <div className="py-12 flex justify-center"><Loader /></div>}
+
       {!loading && (
-        <table className="w-full border-collapse border border-[#91aeb2]">
-          <thead>
-            <tr className="bg-[#91aeb2]">
-              <th className="border p-2">Sr No</th>
-              <th className="border p-2">Book Name</th>
-              <th className="border p-2">Price</th>
-              <th className="border p-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        <div className="space-y-1.5">
+          <AnimatePresence>
             {books.length > 0 ? (
               books.map((book, index) => (
-                <tr key={book._id} className="text-center">
-                  <td className="border p-2">{index + 1}</td>
-                  <td className="border p-2">{book.title}</td>
-                  <td className="border p-2">₹{book.price}</td>
-                  <td className="border p-2">
+                <motion.div
+                  key={book._id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8, height: 0, marginBottom: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  className="flex items-center justify-between px-4 py-3 rounded-sm"
+                  style={{ background: "var(--bg-surface-hover)", border: "1px solid var(--border-light)" }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-6 h-6 rounded-sm flex items-center justify-center shrink-0" style={{ background: "var(--bg-surface-alt)" }}>
+                      <BookOpen size={11} style={{ color: "var(--text-muted)" }} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>{book.title}</p>
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>₹{book.price}</p>
+                    </div>
+                  </div>
+
+                  {confirmId === book._id ? (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs" style={{ color: "var(--text-muted)" }}>Delete?</span>
+                      <button
+                        onClick={() => deleteBook(book._id)}
+                        className="px-3 py-1.5 rounded-sm text-xs font-medium transition-all"
+                        style={{ background: "var(--accent-danger-bg)", border: "1px solid var(--border-danger)", color: "var(--accent-danger)" }}
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setConfirmId(null)}
+                        className="px-3 py-1.5 rounded-sm text-xs transition-all"
+                        style={{ background: "var(--bg-surface-alt)", color: "var(--text-muted)", border: "none" }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = "var(--text-primary)"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-muted)"}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      className="bg-[#a7490e] text-white px-4 py-1 rounded"
-                      onClick={() => deleteBook(book._id)}
+                      onClick={() => setConfirmId(book._id)}
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium ml-3 transition-all"
+                      style={{ background: "var(--accent-danger-bg)", border: "1px solid rgba(184,84,80,0.18)", color: "var(--accent-danger)" }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "rgba(184,84,80,0.13)"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "var(--accent-danger-bg)"}
                     >
-                      Delete
+                      <Trash2 size={11} /> Delete
                     </button>
-                  </td>
-                </tr>
+                  )}
+                </motion.div>
               ))
             ) : (
-              <tr>
-                <td colSpan="4" className="border p-2 text-center">
-                  No books found
-                </td>
-              </tr>
+              <div className="py-14 text-center">
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>No books found</p>
+              </div>
             )}
-          </tbody>
-        </table>
+          </AnimatePresence>
+        </div>
       )}
+
       {showAlert && <CustomAlert message={alertMessage} onClose={() => setShowAlert(false)} />}
-    </div>
+    </motion.div>
   );
 };
 

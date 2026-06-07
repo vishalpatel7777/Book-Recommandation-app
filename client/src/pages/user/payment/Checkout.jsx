@@ -1,8 +1,10 @@
 import { load } from "@cashfreepayments/cashfree-js";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-// import axios from "axios"; // <-- Unused import removed
-import api from "../../../services/axios"; // <-- Corrected path
+import { motion } from "framer-motion";
+import { RefreshCw } from "lucide-react";
+import api from "../../../services/axios";
+import Loader from "../../../components/common/Loader/Loader";
 
 function Checkout() {
   const { state } = useLocation();
@@ -14,7 +16,6 @@ function Checkout() {
   useEffect(() => {
     const initializePayment = async () => {
       if (!amount || !customer_id || !customer_email || !customer_phone || !book) {
-        console.error("Missing payment details");
         setLoading(false);
         return;
       }
@@ -38,18 +39,10 @@ function Checkout() {
           cashfree.checkout({ paymentSessionId: orderToken, redirectTarget: "_modal" })
             .then((result) => {
               if (result.paymentDetails) {
-                console.log("Payment Successful");
                 navigate("/payment-success", {
-                  state: {
-                    book: book,
-                    amount,
-                    customer_email,
-                    paymentDetails: result.paymentDetails,
-                  },
+                  state: { book, amount, customer_email, paymentDetails: result.paymentDetails },
                 });
               } else if (result.error) {
-                console.log("Error in payment:", result.error);
-                // Handle payment failure (e.g., navigate to a failure page)
                 navigate("/payment-failure", { state: { error: result.error.message } });
               }
             });
@@ -65,18 +58,27 @@ function Checkout() {
   }, [amount, customer_id, customer_email, customer_phone, book, navigate]);
 
   return (
-    <div className="relative pt-[121px] overflow-x-hidden p-6 flex items-center justify-center min-h-[calc(100vh-200px)]">
-      {loading ? (
-        <p className="text-2xl font-semibold">Loading payment gateway...</p>
-      ) : (
-        <button 
-          onClick={() => window.location.reload()} 
-          disabled={!paymentSessionId}
-          className="px-6 py-3 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 disabled:bg-gray-400"
-        >
-          Click to Retry Payment
-        </button>
-      )}
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 var(--space-4)", background: "var(--bg-page)" }}>
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: "center" }}>
+        {loading ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
+            <Loader />
+            <p style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>Preparing your payment...</p>
+          </div>
+        ) : (
+          <div style={{ borderRadius: "var(--radius-sm)", padding: "var(--space-8)", background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+            <p style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-base)", color: "var(--text-primary)", marginBottom: "var(--space-5)" }}>Payment gateway ready</p>
+            <button
+              onClick={() => window.location.reload()}
+              disabled={!paymentSessionId}
+              className="btn btn-primary"
+              style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)", opacity: !paymentSessionId ? 0.5 : 1 }}
+            >
+              <RefreshCw size={13} /> Retry Payment
+            </button>
+          </div>
+        )}
+      </motion.div>
     </div>
   );
 }

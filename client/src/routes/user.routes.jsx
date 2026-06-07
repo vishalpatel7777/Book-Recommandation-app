@@ -1,115 +1,53 @@
-import Home from '../components/books/Home/Home';
-import About from '../pages/user/About';
-import Thankyou from '../pages/user/Thankyou';
-import Mainwishlist from '../components/user/wishlist/Mainwishlist';
-import Favorite from '../pages/user/Favorite'; // Assumed path
-import ContactUs from '../pages/user/Contact';
-import Notification from '../pages/user/Notification';
-import Cart from '../pages/user/Cart';
-import Welcome from '../pages/user/Welcome';
-import Buy from '../pages/user/Buy';
-import Checkout from '../pages/user/Payment/Checkout';
-import PaymentSuccess from '../pages/user/payment/PaymentSuccess';
+import { lazy } from 'react';
+import PATHS from '../config/paths';
 
-// Profile page and its nested components
-import Profile from '../pages/user/Profile';
-import Wishlist from '../components/user/wishlist/Wishlist';
-import Terms from '../components/user/profile/Terms';
-import Privacy from '../components/user/profile/Privacy';
-import Blog from '../components/user/profile/Blog';
-import BestAuthor from '../components/user/profile/BestAuthor';
-import Faq from '../components/user/profile/Faq';
-import EditProfile from '../components/user/profile/EditProfile';
+const Home = lazy(() => import('../components/books/Home/Home'));
+const About = lazy(() => import('../pages/user/About'));
+const Thankyou = lazy(() => import('../pages/user/Thankyou'));
+const Mainwishlist = lazy(() => import('../components/user/wishlist/Mainwishlist'));
+const Favorite = lazy(() => import('../pages/user/Favorite'));
+const ContactUs = lazy(() => import('../pages/user/Contact'));
+const Notification = lazy(() => import('../pages/user/Notification'));
+const Cart = lazy(() => import('../pages/user/Cart'));
+const Welcome = lazy(() => import('../pages/user/Welcome'));
+const Buy = lazy(() => import('../pages/user/Buy'));
+const Checkout = lazy(() => import('../pages/user/payment/Checkout'));
+const PaymentSuccess = lazy(() => import('../pages/user/payment/PaymentSuccess'));
+const Profile = lazy(() => import('../pages/user/Profile'));
+const Wishlist = lazy(() => import('../components/user/wishlist/Wishlist'));
+const Terms = lazy(() => import('../components/user/Profile/Terms'));
+const Privacy = lazy(() => import('../components/user/Profile/Privacy'));
+const Blog = lazy(() => import('../components/user/Profile/Blog'));
+const BestAuthor = lazy(() => import('../components/user/Profile/BestAuthor'));
+const Faq = lazy(() => import('../components/user/Profile/Faq'));
+const EditProfile = lazy(() => import('../components/user/Profile/EditProfile'));
 
 const userRoutes = [
+  { path: PATHS.HOME, element: <Home /> },
+  { path: '/home', element: <Home /> },
+  { path: PATHS.ABOUT, element: <About /> },
+  { path: PATHS.THANKYOU, element: <Thankyou /> },
+  { path: '/wishlist/:id', element: <Mainwishlist /> },
+  { path: PATHS.WISHLIST, element: <Favorite /> },
+  { path: PATHS.CONTACT, element: <ContactUs /> },
+  { path: PATHS.NOTIFICATION, element: <Notification /> },
+  { path: PATHS.CART, element: <Cart /> },
+  { path: PATHS.WELCOME, element: <Welcome /> },
+  { path: '/buy/:id', element: <Buy /> },
+  { path: PATHS.CHECKOUT, element: <Checkout /> },
+  { path: PATHS.PAYMENT_SUCCESS, element: <PaymentSuccess /> },
   {
-    path: '/',
-    element: <Home />,
-  },
-  {
-    path: '/home',
-    element: <Home />,
-  },
-  {
-    path: '/about',
-    element: <About />,
-  },
-  {
-    path: '/thankyou',
-    element: <Thankyou />,
-  },
-  {
-    path: '/wishlist/:id',
-    element: <Mainwishlist />,
-  },
-  {
-    path: '/wishlist',
-    element: <Favorite />,
-  },
-  {
-    path: '/contact-us',
-    element: <ContactUs />,
-  },
-  {
-    path: '/notification',
-    element: <Notification />,
-  },
-  {
-    path: '/addtocart',
-    element: <Cart />,
-  },
-  {
-    path: '/welcome',
-    element: <Welcome />,
-  },
-  {
-    path: '/buy/:id',
-    element: <Buy />,
-  },
-  {
-    path: '/checkout',
-    element: <Checkout />,
-  },
-  {
-    path: '/payment-success',
-    element: <PaymentSuccess />,
-  },
-  {
-    path: '/profile',
+    path: PATHS.PROFILE,
     element: <Profile />,
     children: [
-      {
-        index: true, // This makes <Wishlist /> the default child
-        element: <Wishlist />,
-      },
-      {
-        path: 'wishlist', // Note: relative path
-        element: <Wishlist />,
-      },
-      {
-        path: 'terms', // e.g., /profile/terms
-        element: <Terms />,
-      },
-      {
-        path: 'privacy-policy', // e.g., /profile/privacy-policy
-        element: <Privacy />,
-      },
-      {
-        path: 'blog',
-        element: <Blog />,
-      },
-      {
-        path: 'best-author',
-        element: <BestAuthor />,
-      },
-      {
-        path: 'faq',
-        element: <Faq />,
-      },
-      {
-        path: 'edit-profile',
-        element: <EditProfile />,
-      },
+      { index: true, element: <Wishlist /> },
+      { path: 'wishlist', element: <Wishlist /> },
+      { path: 'terms', element: <Terms /> },
+      { path: 'privacy-policy', element: <Privacy /> },
+      { path: 'blog', element: <Blog /> },
+      { path: 'best-author', element: <BestAuthor /> },
+      { path: 'faq', element: <Faq /> },
+      { path: 'edit-profile', element: <EditProfile /> },
     ],
   },
 ];

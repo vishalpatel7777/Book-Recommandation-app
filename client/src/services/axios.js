@@ -1,12 +1,10 @@
 import axios from "axios";
+import appConfig from "../config/app.config";
 
-const BASE_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:1000/api/v1"
-    : "https://book-mosaic.onrender.com/api/v1";
-
+// Change API_BASE_URL in config/app.config.js → updates every API call
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: appConfig.API_BASE_URL,
+  withCredentials: true, // Sends HttpOnly cookies automatically
 });
 
 export default api;

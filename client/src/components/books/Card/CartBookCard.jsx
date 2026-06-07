@@ -1,63 +1,80 @@
-import React, { useState } from "react";
-import { FaStar, FaStarHalfAlt, FaRegStar } from "react-icons/fa"; // Rating component handles this
+import { useState } from "react";
+import { Trash2, Star, BookOpen } from "lucide-react";
+import { useFlashAlert } from "../../../hooks";
 import CustomAlert from "../../common/Alert/CustomAlert";
-import api from "../../../services/axios"; // <-- Corrected path
-import Rating from "../../common/Rating/Rating"; // <-- Import reusable component
+import api from "../../../services/axios";
 
 const CartBookCard = ({ data, cart }) => {
-  const headers = {
-    id: localStorage.getItem("id"),
-    authorization: `Bearer ${localStorage.getItem("token")}`,
-    bookid: data._id,
-  };
+  const { showAlert, alertMessage, flashAlert, setShowAlert } = useFlashAlert();
+  const [imgErr, setImgErr]   = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const rating = Number(data.ratings) || 0;
+  const stars  = Math.round(rating);
 
-  const [showAlert, setShowAlert] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
-
-  const handleRemoveBook = async () => {
+  const handleRemove = async () => {
+    setRemoving(true);
     try {
-      const response = await api.put("/remove-book-from-cart", {}, { headers });
-      setAlertMessage(response.data.message);
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
-      if (cart && typeof cart === "function") {
-        cart((prevCart) => prevCart.filter((item) => item._id !== data._id));
+      const res = await api.put("/remove-book-from-cart", {}, { headers: { bookid: data._id } });
+      flashAlert(res.data.message);
+      if (typeof cart === "function") {
+        cart((prev) => prev.filter((item) => item._id !== data._id));
       }
-    } catch (error) {
-      setAlertMessage(error.response?.data?.message || "Failed to remove book from cart");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
+    } catch (err) {
+      flashAlert(err.response?.data?.message || "Failed to remove from cart");
+      setRemoving(false);
     }
   };
 
-  // The renderStars function is no longer needed here
-
   return (
-    <div className="hover:shadow-2xl p-2 rounded w-[250px] h-[400px] flex flex-col">
-      <div className="rounded flex items-center justify-center">
-        <img src={data.image} alt={data.title} className="p-3 h-[212px] w-[137px]" />
+    <>
+      <div style={{
+        display: "flex",
+        gap: "var(--space-4)",
+        padding: "var(--space-4)",
+        background: "var(--bg-card)",
+        border: `1px solid var(--border)`,
+        borderRadius: "var(--radius-md)",
+        opacity: removing ? 0.5 : 1,
+        transition: "var(--transition)",
+      }}>
+        {/* Cover */}
+        <div style={{ width: 56, height: 72, borderRadius: "var(--radius-xs)", overflow: "hidden", flexShrink: 0, background: "var(--bg-surface)", display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid var(--border-light)` }}>
+          {!imgErr ? (
+            <img src={data.image} alt={data.title} style={{ width: "100%", height: "100%", objectFit: "contain", padding: "4px" }} onError={() => setImgErr(true)} />
+          ) : (
+            <BookOpen size={16} style={{ color: "var(--text-muted)" }} />
+          )}
+        </div>
+
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>{data.title || "Untitled"}</h3>
+          <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginBottom: "var(--space-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{data.author}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "2px", marginBottom: "var(--space-2)" }}>
+            {[1, 2, 3, 4, 5].map((s) => (
+              <Star key={s} size={10}
+                fill={s <= stars ? "var(--accent-gold)" : "none"}
+                stroke={s <= stars ? "var(--accent-gold)" : "var(--border-medium)"}
+                strokeWidth={1.5}
+              />
+            ))}
+          </div>
+          <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--accent-sage)" }}>₹{data.price}</span>
+        </div>
+
+        {/* Remove */}
+        <button
+          onClick={handleRemove}
+          disabled={removing}
+          style={{ alignSelf: "flex-start", padding: "var(--space-1)", borderRadius: "var(--radius-sm)", color: "var(--border-medium)", background: "none", border: "none", cursor: removing ? "not-allowed" : "pointer", transition: "var(--transition-color)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-danger)"; e.currentTarget.style.background = "var(--accent-danger-bg)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--border-medium)"; e.currentTarget.style.background = "none"; }}
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
-      <h2 className="text-black text-xl font-semibold flex justify-center overflow-hidden" title={data.title}>
-        {data.title || "Untitled"}
-      </h2>
-      <p className="text-black text-xl font-semibold flex justify-center">by {data.author}</p>
-      <p className="text-black text-xl font-semibold relative left-[90px] justify-center">₹ {data.price}</p>
-      <p className="text-black text-xl flex">
-        Rating: &nbsp; <Rating rating={data.ratings} /> {/* <-- Use component */}
-      </p>
-      <button
-        className="bg-[#f8ca58] text-2xl px-8 py-2 rounded border mt-2"
-        onClick={handleRemoveBook}
-      >
-        Remove from Cart
-      </button>
-      {showAlert && (
-        <CustomAlert
-          message={alertMessage}
-          onClose={() => setShowAlert(false)}
-        />
-      )}
-    </div>
+      {showAlert && <CustomAlert message={alertMessage} onClose={() => setShowAlert(false)} />}
+    </>
   );
 };
 

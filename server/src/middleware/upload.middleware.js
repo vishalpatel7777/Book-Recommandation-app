@@ -1,33 +1,28 @@
 const multer = require("multer");
 const os = require("os");
-const path = require("path");
-
-// Use the OS temporary directory for Multer storage
-const uploadDir = os.tmpdir(); 
+const { UPLOAD_DIR } = require("../config/paths");
+const { MAX_PDF_SIZE_MB } = require("../config/constants");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    console.log("Setting upload destination:", uploadDir);
-    cb(null, uploadDir);
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
-    const filename = `${Date.now()}-${file.originalname.replace(/ /g, '_')}`; // Replace spaces
-    console.log("Generated filename:", filename);
+    const filename = `${Date.now()}-${file.originalname.replace(/ /g, "_")}`;
     cb(null, filename);
   },
 });
 
-// 60 MB limit for PDF files
 const uploadPdf = multer({
   storage,
-  limits: { fileSize: 60 * 1024 * 1024 }, 
+  limits: { fileSize: MAX_PDF_SIZE_MB * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
+    if (file.mimetype === "application/pdf") {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF files are allowed'), false);
+      cb(new Error("Only PDF files are allowed"), false);
     }
-  }
+  },
 }).single("pdf");
 
 module.exports = { uploadPdf };

@@ -1,46 +1,17 @@
-import "./App.css"; // Correct path
-import { Outlet, useNavigate } from "react-router-dom";
-// Navbar, AdminNavbar, Footer are no longer imported/rendered here
-import { useDispatch, useSelector } from "react-redux";
+import "./App.css";
+import { Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
-// Import the correct action from your auth slice
-import { loginSuccess } from "./store/slices/auth.slice"; 
 
 function App() {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  // We might still need role or isLoggedIn for global checks if any remain
-  const role = useSelector((state) => state.auth.user?.role); 
-  const isLoggedIn = useSelector((state) => state.auth.isLoggedIn); 
-
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   // Removed admin redirect useEffect - handle in routing/protected routes
 
   useEffect(() => {
-    // Check localStorage on initial load to potentially log the user back in
-    const storedUser = localStorage.getItem("user");
-    const storedToken = localStorage.getItem("token");
-
-    if (storedUser && storedToken && !isLoggedIn) { // Check !isLoggedIn to avoid re-dispatching
-      try {
-        const user = JSON.parse(storedUser);
-        // Dispatch loginSuccess with the stored user and token
-        dispatch(loginSuccess({ user, token: storedToken })); 
-      } catch (e) {
-         console.error("Failed to parse stored user:", e);
-         localStorage.clear(); // Clear invalid stored data
-      }
-    }
-
-    
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [dispatch, isLoggedIn]); // Added isLoggedIn dependency
+  }, []);
 
   // Conditional rendering for mobile incompatibility
   if (isMobile) {

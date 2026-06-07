@@ -1,107 +1,158 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-// import axios from "axios"; // <-- Unused import removed
-import { MdFavorite } from "react-icons/md";
-import { GrLanguage } from "react-icons/gr";
-import CustomAlert from "../../common/Alert/CustomAlert"; // <-- Corrected path
-import api from "../../../services/axios"; // <-- Corrected path
+import { motion } from "framer-motion";
+import { BookHeart, ArrowLeft, Globe, Tag, AlignLeft, Trash2, Star } from "lucide-react";
+import CustomAlert from "../../common/Alert/CustomAlert";
+import Loader from "../../common/Loader/Loader";
+import api from "../../../services/axios";
+import { getBookById } from "../../../services/book.service";
+import { useFlashAlert } from '../../../hooks';
 
-const MainWishlist = () => { // <-- Capitalized component name
+const MainWishlist = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [Book, setBook] = useState(null); // Keep null initially
-
-  const [showAlert, setShowAlert] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
+  const [Book, setBook] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { showAlert, alertMessage, flashAlert, setShowAlert } = useFlashAlert();
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const response = await api.get(`/get-book-by-id/${id}`);
-        setBook(response.data.data);
-      } catch (error) {
-         console.error("Error fetching book details:", error);
-         setBook(null); // Set to null on error
-      }
-    };
-    fetch();
+    getBookById(id)
+      .then(setBook)
+      .catch(() => setBook(null))
+      .finally(() => setLoading(false));
   }, [id]);
 
   const handleRemoveBook = async () => {
-    const headers = {
-      id: localStorage.getItem("id"),
-      authorization: `Bearer ${localStorage.getItem("token")}`,
-      bookid: Book?._id, // Use optional chaining
-    };
     try {
-      const response = await api.put(`/remove-book-from-wishlist`, {}, { headers });
-      setAlertMessage(response.data.message);
-      setShowAlert(true);
-      setTimeout(() => {
-         setShowAlert(false);
-         // Navigate back to the main wishlist view after successful removal
-         navigate("/profile/wishlist"); 
-      }, 2000);
+      const response = await api.put('/remove-book-from-wishlist', {}, {
+        headers: { bookid: Book?._id },
+      });
+      flashAlert(response.data.message, () => navigate('/profile/wishlist'));
     } catch (error) {
-      console.error("Error removing book:", error);
-      setAlertMessage("Failed to remove book from wishlist");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
+      flashAlert(error.response?.data?.message || 'Failed to remove book from wishlist');
     }
   };
 
-  // Optional: Add loading state
-  // if (Book === undefined) {
-  //   return <div>Loading...</div>; // Or use Loader component
-  // }
+  if (loading) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-page)" }}>
+      <Loader />
+    </div>
+  );
+
+  if (!Book) return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--space-4)", background: "var(--bg-page)" }}>
+      <BookHeart size={36} style={{ color: "var(--border-medium)" }} />
+      <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>Could not load book details.</p>
+      <Link to="/profile/wishlist" style={{ fontSize: "var(--text-sm)", color: "var(--accent-sage)", textDecoration: "none" }}>Back to Wishlist</Link>
+    </div>
+  );
+
+  const stars = Math.round(Book.ratings || 0);
 
   return (
-    <div className="relative pt-[151px] overflow-x-hidden mt-8 px-4">
-      <div className="border-b-4 border-gray-400 flex items-center gap-4 px-4 pb-2">
-        <MdFavorite className="text-3xl" />
-        <h2 className="text-3xl font-semibold font-caveat">Wishlist Details</h2>
-      </div>
-      {Book ? ( // Check if Book is not null
-        <div className="relative px-12 py-8 flex gap-8 overflow-x-hidden">
-          <div className="rounded p-4 h-[80vh] w-2/6 flex items-center justify-center">
+    <div style={{ minHeight: "100vh", padding: "var(--space-10) var(--space-6)", maxWidth: "64rem", margin: "0 auto", background: "var(--bg-page)" }}>
+      <button
+        onClick={() => navigate('/profile/wishlist')}
+        style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--text-sm)", color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", transition: "var(--transition-color)", marginBottom: "var(--space-10)" }}
+        onMouseEnter={(e) => e.currentTarget.style.color = "var(--text-primary)"}
+        onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-muted)"}
+      >
+        <ArrowLeft size={15} /> Back to Wishlist
+      </button>
+
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ display: "flex", flexDirection: "column", gap: "var(--space-12)" }} className="md:flex-row">
+        {/* Cover */}
+        <div style={{ display: "flex", justifyContent: "center" }} className="md:w-64 shrink-0">
+          <div style={{
+            background: "var(--bg-surface)",
+            width: "100%", maxWidth: "240px", minHeight: "320px",
+            borderRadius: "var(--radius-sm)",
+            boxShadow: "var(--shadow-book)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
             <img
               src={Book.image}
-              alt={Book.title || "Book cover"}
-              className="h-[430px] shadow-[5px_20px_50px_rgba(0,0,0,0.4)] transform transition-all duration-500 hover:rotate-0 hover:scale-105"
+              alt={Book.title}
+              style={{ maxWidth: "80%", maxHeight: "280px", objectFit: "contain", filter: "drop-shadow(0 12px 24px rgba(0,0,0,0.15))" }}
             />
           </div>
-          <div className="p-4 w-4/6">
-            <div className="flex flex-row relative left-20 gap-2">
-              <h1 className="text-[34px] text-black font-semibold">{Book.title}</h1>
-              <p className="text-black text-[34px] font-semibold">By {Book.author}</p>
+        </div>
+
+        {/* Details */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: "var(--space-1)",
+            padding: "var(--space-1) var(--space-3)", borderRadius: "var(--radius-full)",
+            fontSize: "var(--text-xs)", fontWeight: 500,
+            background: "var(--accent-sage-bg)", border: "1px solid var(--accent-sage-mid)", color: "var(--accent-sage-text)",
+            marginBottom: "var(--space-5)",
+          }}>
+            <Tag size={10} /> {Book.genre || "Book"}
+          </span>
+
+          <h1 style={{ fontFamily: "var(--font-heading)", fontSize: "clamp(1.5rem, 3vw, 2rem)", fontWeight: 600, color: "var(--text-primary)", marginBottom: "var(--space-2)" }}>{Book.title}</h1>
+          <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-4)" }}>by <em style={{ color: "var(--text-primary)" }}>{Book.author}</em></p>
+
+          {stars > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", marginBottom: "var(--space-5)" }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star key={i} size={13}
+                  fill={i < stars ? "var(--accent-gold)" : "none"}
+                  stroke={i < stars ? "var(--accent-gold)" : "var(--border-medium)"}
+                  strokeWidth={1.5}
+                />
+              ))}
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginLeft: "var(--space-1)" }}>{Book.ratings?.toFixed(1)}</span>
             </div>
-            <div className="border-b-[3px] border-gray-300 top-2 relative w-[870px]"></div>
-            <p className="text-black mt-10 text-2xl"><span className="font-semibold">Genre :</span> {Book.genre}</p>
-            <p className="text-black mt-3 text-2xl"><span className="font-semibold">Subject : </span>{Book.subject}</p>
-            <p className="text-black mt-4 text-2xl"><span className="font-semibold">Description : </span>{Book.desc}</p>
-            <a
-              href={Book.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-black mt-6 text-2xl flex flex-row items-center justify-start gap-2 text-blue-700 hover:text-blue-600"
+          )}
+
+          <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "var(--space-5)", marginBottom: "var(--space-5)" }}>
+            {Book.subject && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+                <AlignLeft size={12} style={{ color: "var(--text-muted)", marginTop: "3px", flexShrink: 0 }} />
+                <p style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
+                  <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>Subject:</span> {Book.subject}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {Book.desc && (
+            <p style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: "var(--leading-relaxed)", marginBottom: "var(--space-5)", maxWidth: "480px" }}>{Book.desc}</p>
+          )}
+
+          {Book.url && (
+            <a href={Book.url} target="_blank" rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)", fontSize: "var(--text-sm)", color: "var(--accent-sage)", textDecoration: "none", marginBottom: "var(--space-6)", transition: "var(--transition-color)" }}
+              onMouseEnter={(e) => e.currentTarget.style.color = "var(--accent-sage-dark)"}
+              onMouseLeave={(e) => e.currentTarget.style.color = "var(--accent-sage)"}
             >
-              <GrLanguage className="flex" /> Get more Info
+              <Globe size={12} /> More information
             </a>
-            <div className="gap-10 flex top-50 relative left-40 mt-6"> {/* Added margin-top */}
-              <div className="w-[195px] p-2 h-[49px] bg-[#edb953] rounded-4xl text-xl">
-                 {/* Link should go back to the main wishlist page */}
-                <Link to="/wishlist"><button className="pl-6.5 justify-center items-center">Back to Wishlist</button></Link>
-              </div>
-              <div className="relative left-[24px] w-[195px] p-2 h-[49px] bg-[#c15c54] rounded-4xl text-xl">
-                <button className="pl-2.5 justify-center items-center" onClick={handleRemoveBook}>Remove from wishlist</button>
-              </div>
-            </div>
+          )}
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-3)" }}>
+            <Link to="/profile/wishlist" style={{ textDecoration: "none" }}>
+              <button className="btn btn-secondary">Back to Wishlist</button>
+            </Link>
+            <button
+              onClick={handleRemoveBook}
+              style={{
+                display: "flex", alignItems: "center", gap: "var(--space-2)",
+                padding: "var(--space-2) var(--space-5)", borderRadius: "var(--radius-sm)",
+                fontSize: "var(--text-sm)", fontWeight: 500,
+                border: "1px solid var(--border-medium)", color: "var(--accent-danger)",
+                background: "var(--bg-card)", cursor: "pointer", transition: "var(--transition)",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent-danger)"; e.currentTarget.style.background = "rgba(184,84,80,0.04)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border-medium)"; e.currentTarget.style.background = "var(--bg-card)"; }}
+            >
+              <Trash2 size={13} /> Remove from Wishlist
+            </button>
           </div>
         </div>
-      ) : (
-         // Handle case where book couldn't be fetched
-         <p className="text-center text-red-500 mt-10">Could not load book details.</p> 
-      )}
+      </motion.div>
+
       {showAlert && <CustomAlert message={alertMessage} onClose={() => setShowAlert(false)} />}
     </div>
   );

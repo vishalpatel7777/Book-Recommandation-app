@@ -3,7 +3,8 @@ const Book = require("../models/book.model");
 const Review = require("../models/review.model");
 const Rating = require("../models/rating.model");
 const Purchase = require("../models/purchase.model");
-const bcrypt = require("bcryptjs"); // <--- Imported for manual hashing
+const bcrypt = require("bcryptjs");
+const { BCRYPT_SALT_ROUNDS, TOP_BOOKS_LIMIT } = require("../config/constants");
 
 // Service to get profile data, excluding sensitive fields
 const fetchAdminProfile = async (adminId) => {
@@ -27,7 +28,7 @@ const updateAdminProfile = async (adminId, updateData, oldPassword) => {
     }
     
     // CRITICAL FIX: Manually hash the new password for findByIdAndUpdate
-    const hashedPassword = await bcrypt.hash(updateData.password, 10);
+    const hashedPassword = await bcrypt.hash(updateData.password, BCRYPT_SALT_ROUNDS);
     updateData.password = hashedPassword;
   }
   
@@ -78,10 +79,10 @@ const fetchBookAnalytics = async () => {
   const topRatedBooks = await Rating.aggregate([
     { $group: { _id: "$book", ratings: { $avg: "$rate" } } }, 
     { $sort: { ratings: -1 } },
-    { $limit: 5 },
+    { $limit: TOP_BOOKS_LIMIT },
     {
       $lookup: {
-        from: "books", 
+        from: "books",
         localField: "_id",
         foreignField: "_id",
         as: "bookData",
@@ -95,7 +96,7 @@ const fetchBookAnalytics = async () => {
   const mostPurchasedBooks = await Purchase.aggregate([
     { $group: { _id: "$book", purchases: { $sum: 1 } } },
     { $sort: { purchases: -1 } },
-    { $limit: 5 },
+    { $limit: TOP_BOOKS_LIMIT },
     {
       $lookup: {
         from: "books", 
@@ -110,7 +111,7 @@ const fetchBookAnalytics = async () => {
 
   const recentBooks = await Book.find()
     .sort({ createdAt: -1 })
-    .limit(5)
+    .limit(TOP_BOOKS_LIMIT)
     .select("title createdAt");
 
   return {
@@ -161,7 +162,7 @@ const fetchMonthlyAnalytics = async () => {
   const topGenres = await Book.aggregate([
     { $group: { _id: "$genre", count: { $sum: 1 } } },
     { $sort: { count: -1 } },
-    { $limit: 5 },
+    { $limit: TOP_BOOKS_LIMIT },
   ]);
 
   return {

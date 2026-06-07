@@ -1,48 +1,59 @@
+const env = require("./config/env");           // MUST be first — validates env on boot
+const appConfig = require("./config/app.config");
+const paths = require("./config/paths");
+
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
+const helmet = require("helmet");
+const mongoSanitize = require("express-mongo-sanitize");
+const xss = require("xss-clean");
+const hpp = require("hpp");
 const fs = require("fs");
-// IMPORTANT: Use path.join to safely resolve directories across OS types
-const os = require('os');
-require("dotenv").config(); 
+const cookieParser = require("cookie-parser");
+
+const { globalLimiter } = require("./middleware/rateLimiter");
 
 const app = express();
 
-// --- General Middleware ---
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+// --- Security headers (must be early) ---
+app.use(helmet());
 
-// --- Route Imports ---
-const { registerRoutes } = require("./routes/index"); // Path is now local to src/
-// Import the central error handling middleware
-const { errorMiddleware } = require("./middleware/error.middleware");
+// --- CORS ---
+app.use(cors(appConfig.cors));
+app.options("*", cors(appConfig.cors));
 
-// --- Static Serving ---
-// CRITICAL: Multer uses os.tmpdir() which is different from your project root.
-const tempDir = os.tmpdir(); 
+// --- Global rate limiter ---
+app.use(globalLimiter);
 
-// Ensure the temporary directory exists (Multer needs it)
-if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
+// --- Body parsing ---
+app.use(express.json({ limit: appConfig.body.jsonLimit }));
+app.use(express.urlencoded({ extended: true, limit: appConfig.body.urlencodedLimit }));
+app.use(cookieParser());
+
+// --- Sanitization (after body parsing) ---
+app.use(mongoSanitize());   // strip $ and . from req.body / req.query / req.params
+app.use(xss());             // strip HTML tags from string inputs
+app.use(hpp());             // remove duplicate query-string params
+
+// --- Static file serving ---
+if (!fs.existsSync(paths.UPLOAD_DIR)) {
+  fs.mkdirSync(paths.UPLOAD_DIR, { recursive: true });
 }
-
-app.use("/uploads", express.static(tempDir, { 
-    setHeaders: (res, path) => {
-        res.set('Cache-Control', 'public, max-age=31536000');
-    }
+app.use(paths.UPLOAD_STATIC_ROUTE, express.static(paths.UPLOAD_DIR, {
+  setHeaders: (res) => {
+    res.set("Cache-Control", "public, max-age=31536000");
+  },
 }));
 
+// --- Routes ---
+const { registerRoutes } = require("./routes/index");
+const { errorMiddleware } = require("./middleware/error.middleware");
 
-// --- API Route Registration ---
 registerRoutes(app);
-
-// --- Central Error Handler (Must be placed last) ---
 app.use(errorMiddleware);
 
-// --- Root Health Check ---
-app.get('/', (req, res) => {
-    res.status(200).json({ status: "ok", message: "BookMosaic API is running." });
+app.get("/", (req, res) => {
+  res.status(200).json({ status: "ok", message: "BookMosaic API is running.", env: appConfig.nodeEnv });
 });
 
 module.exports = app;

@@ -1,136 +1,102 @@
-import React, { useEffect, useState } from 'react';
-// import axios from 'axios'; // <-- Unused import removed
-import Loader from "../../common/Loader/Loader"; // <-- Corrected path
-import CustomAlert from "../../common/Alert/CustomAlert"; // <-- Corrected path
-import api from '../../../services/axios'; // <-- Corrected path
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { User, Mail, Phone } from "lucide-react";
+import Loader from "../../common/Loader/Loader";
+import CustomAlert from "../../common/Alert/CustomAlert";
+import api from "../../../services/axios";
+import { useFlashAlert, useFormValues } from "../../../hooks";
+
+const inputStyle = {
+  width: "100%",
+  padding: "0.6rem 0.875rem",
+  background: "var(--bg-page)",
+  border: "1px solid var(--border-medium)",
+  borderRadius: "var(--radius-sm)",
+  color: "var(--text-primary)",
+  fontSize: "var(--text-sm)",
+  fontFamily: "var(--font-body)",
+  outline: "none",
+  transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+};
 
 const EditProfile = () => {
-  const [showAlert, setShowAlert] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
-  const [ProfileData, setProfileData] = useState(null);
-  const [Values, setValues] = useState({
-    age: "",
-    genre: "",
-  });
-
-  const headers = {
-    id: localStorage.getItem('id'),
-    authorization: `Bearer ${localStorage.getItem("token")}`,
-  };
-
-  const change = (e) => {
-    const { name, value } = e.target;
-    setValues({ ...Values, [name]: value });
-  };
+  const { showAlert, alertMessage, flashAlert, setShowAlert } = useFlashAlert();
+  const [profileData, setProfileData] = useState(null);
+  const [Values, change, setValues] = useFormValues({ age: "", genre: "" });
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const response = await api.get("/user-information", { headers });
-        setProfileData(response.data);
-        setValues({ age: response.data.age || "", genre: response.data.genre || "" });
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-        setProfileData(null);
-      }
-    };
-    fetch();
-  }, []); // Empty dependency array is correct here, runs once on mount
+    api.get("/user-information")
+      .then((r) => { setProfileData(r.data); setValues({ age: r.data.age || "", genre: r.data.genre || "" }); })
+      .catch(() => setProfileData(null));
+  }, []);
 
-  const submitinfo = async () => {
+  const save = async () => {
     try {
-      const response = await api.put(`/update`, Values, { headers });
-      setAlertMessage(response.data.message);
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
-    } catch (error) {
-      setAlertMessage(error.response?.data?.message || "Failed to update profile");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
+      const res = await api.put("/update", Values);
+      flashAlert(res.data.message);
+    } catch (err) {
+      flashAlert(err.response?.data?.message || "Failed to update profile");
     }
   };
 
+  const focusFn = (e) => {
+    e.target.style.borderColor = "var(--accent-sage)";
+    e.target.style.boxShadow = "0 0 0 3px var(--accent-sage-ring)";
+  };
+  const blurFn = (e) => {
+    e.target.style.borderColor = "var(--border-medium)";
+    e.target.style.boxShadow = "none";
+  };
+
+  if (!profileData) return <div style={{ padding: "var(--space-8) 0" }}><Loader /></div>;
+
   return (
-    <div>
-      {ProfileData === null && (
-        <div className='h-screen flex items-center justify-center'>
-          <Loader />
-        </div>
-      )}
-      {ProfileData && (
-        <div className='h-[100%] p-0 text-black'>
-          <div>
-            <h1 className='text-3xl ml-2 font-semibold'>Settings</h1>
-            <div className="border-b-[4px] border-gray-400 rounded-2xl top-2 mb-8 relative w-[870px]"></div>
-          </div>
-          <div className='flex gap-5 flex-col p-2'>
-            <div className='flex'>
-              <label className='font-semibold text-2xl'>Username :</label>
-              <p className='ml-4 p-[3px] border-2 border-[#a7490e] w-[200px] justify-center flex items-center rounded-full bg-[#a7490e]'>
-                @{ProfileData.username}
-              </p>
-            </div>
-            <div className='flex'>
-              <label className='font-semibold text-2xl'>Email :</label>
-              <p className='ml-12 p-[3px] border-2 border-[#a7490e] w-[200px] justify-center flex items-center rounded-full bg-[#a7490e]'>
-                {ProfileData.email}
-              </p>
-            </div>
-            <div className='flex'>
-              <label className='font-semibold text-2xl'>Phone No. :</label>
-              <p className='ml-4 p-[3px] border-2 border-[#a7490e] w-[200px] justify-center flex items-center rounded-full bg-[#a7490e]'>
-                +91 {ProfileData.phone}
-              </p>
-            </div>
-            <div className='flex mt-3'>
-              <label className='font-semibold text-2xl'>Age :</label>
-              <input
-                type="number"
-                name="age"
-                id="age"
-                value={Values.age}
-                className='ml-17 p-[3px] border-2 border-[#91aeb2] w-[200px] justify-center flex items-center rounded-full bg-[#91aeb2]'
-                placeholder='1'
-                required
-                onChange={change}
-              />
-            </div>
-            <div className='flex'>
-              <label className='font-semibold text-2xl'>Favorite genre :</label>
-              <input
-                type="text"
-                name="genre"
-                id="genre"
-                className='ml-3 p-[3px] border-2 border-[#91aeb2] w-[200px] justify-center flex items-center rounded-full bg-[#91aeb2]'
-                placeholder='Favorite genre'
-                required
-                value={Values.genre}
-                onChange={change}
-              />
-            </div>
-            <div className='flex ml-90 mt-10'>
-              <button
-                className='p-3 text-3xl font-semibold border-2 border-[#37aba3] w-[200px] justify-center flex items-center rounded-full bg-[#37aba3] hover:bg-[#72e1d9] hover:border-[#72e1]'
-                onClick={() => {
-                  submitinfo();
-                  // Note: This hard reload is generally not a great user experience.
-                  // It's better to update the ProfileData state from the submitinfo response.
-                  setTimeout(() => window.location.reload(), 500);
-                }}
-              >
-                Update
-              </button>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-lg)", fontWeight: 600, color: "var(--text-primary)", marginBottom: "var(--space-5)" }}>Edit Profile</h2>
+
+      <div className="grid sm:grid-cols-2 gap-3" style={{ marginBottom: "var(--space-5)" }}>
+        {[
+          { icon: <User size={12} />, label: "Username", value: `@${profileData.username}` },
+          { icon: <Mail size={12} />, label: "Email", value: profileData.email },
+          { icon: <Phone size={12} />, label: "Phone", value: profileData.phone ? `+91 ${profileData.phone}` : "—" },
+        ].map(({ icon, label, value }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3)", borderRadius: "var(--radius-sm)", background: "var(--bg-surface)", border: "1px solid var(--border-light)" }}>
+            <span style={{ color: "var(--text-muted)" }}>{icon}</span>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "var(--tracking-wider)" }}>{label}</p>
+              <p style={{ fontSize: "var(--text-sm)", color: "var(--text-primary)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</p>
             </div>
           </div>
+        ))}
+      </div>
+
+      <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "var(--space-5)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        <div>
+          <label style={{ display: "block", fontSize: "var(--text-xs)", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>Age</label>
+          <input
+            type="number" name="age" value={Values.age} onChange={change}
+            placeholder="Your age"
+            style={inputStyle}
+            onFocus={focusFn} onBlur={blurFn}
+          />
         </div>
-      )}
-      {showAlert && (
-        <CustomAlert
-          message={alertMessage}
-          onClose={() => setShowAlert(false)}
-        />
-      )}
-    </div>
+        <div>
+          <label style={{ display: "block", fontSize: "var(--text-xs)", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>Favourite Genre</label>
+          <input
+            type="text" name="genre" value={Values.genre} onChange={change}
+            placeholder="e.g. Fiction, Science"
+            style={inputStyle}
+            onFocus={focusFn} onBlur={blurFn}
+          />
+        </div>
+      </div>
+
+      <button onClick={save} className="btn btn-primary" style={{ marginTop: "var(--space-5)" }}>
+        Save Changes
+      </button>
+
+      {showAlert && <CustomAlert message={alertMessage} onClose={() => setShowAlert(false)} />}
+    </motion.div>
   );
 };
 

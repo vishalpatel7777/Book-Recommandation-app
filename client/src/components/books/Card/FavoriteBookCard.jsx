@@ -1,70 +1,102 @@
-import React, { useState } from "react";
-import CustomAlert from "../../common/Alert/CustomAlert"; // <-- Corrected path
-import api from "../../../services/axios"; // <-- Corrected path
-import Rating from "../../common/Rating/Rating"; // <-- Import reusable component
+import { useState } from "react";
+import { Trash2, Star, BookOpen } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useFlashAlert } from "../../../hooks";
+import CustomAlert from "../../common/Alert/CustomAlert";
+import api from "../../../services/axios";
 
 const FavoriteBookCard = ({ data, setFavorite }) => {
-  const headers = {
-    id: localStorage.getItem("id"),
-    authorization: `Bearer ${localStorage.getItem("token")}`,
-    bookid: data?._id,
-  };
+  const { showAlert, alertMessage, flashAlert, setShowAlert } = useFlashAlert();
+  const [imgErr, setImgErr]     = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const rating = Number(data?.ratings) || 0;
+  const stars  = Math.round(rating);
 
-  const [showAlert, setShowAlert] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
+  if (!data) return null;
 
-  const handleRemoveBook = async () => {
+  const handleRemove = async () => {
+    setRemoving(true);
     try {
-      const response = await api.put("/remove-book-from-wishlist", {}, { headers });
-      setAlertMessage(response.data.message);
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
-      if (setFavorite && typeof setFavorite === "function") {
-        setFavorite((prevFavorite) => prevFavorite.filter((item) => item._id !== data._id));
+      const res = await api.put("/remove-book-from-wishlist", {}, { headers: { bookid: data._id } });
+      flashAlert(res.data.message);
+      if (typeof setFavorite === "function") {
+        setFavorite((prev) => prev.filter((item) => item._id !== data._id));
       }
-    } catch (error) {
-      setAlertMessage(error.response?.data?.message || "Failed to remove book from wishlist");
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 2000);
+    } catch (err) {
+      flashAlert(err.response?.data?.message || "Failed to remove from wishlist");
+      setRemoving(false);
     }
   };
 
-  // The renderStars function is no longer needed
-
-  if (!data) {
-    return <div>Error: Book data not provided</div>;
-  }
-
   return (
-    <div className="hover:shadow-2xl p-2 rounded w-[270px] h-[420px] flex flex-col">
-      <div className="rounded flex items-center justify-center">
-        <img
-          src={data.image || "placeholder.jpg"}
-          alt={data.title || "Unknown Title"}
-          className="p-3 h-[212px] w-[137px]"
-        />
+    <>
+      <div className="card-book group" style={{ opacity: removing ? 0.5 : 1, transition: "opacity 0.2s" }}>
+        <Link to={`/view-book-details/${data._id}`} style={{ textDecoration: "none" }}>
+          <div style={{ height: 220, background: "var(--bg-surface)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
+            {!imgErr ? (
+              <img
+                src={data.image || "/placeholder.jpg"}
+                alt={data.title}
+                className="h-full object-contain p-4 transition-transform duration-300 group-hover:scale-[1.03]"
+                style={{ maxWidth: "85%" }}
+                onError={() => setImgErr(true)}
+              />
+            ) : (
+              <BookOpen size={40} style={{ color: "var(--border-medium)", opacity: 0.5 }} />
+            )}
+          </div>
+        </Link>
+
+        <div style={{ padding: "var(--space-3) var(--space-4)", borderTop: `1px solid var(--border-light)` }}>
+          <Link to={`/view-book-details/${data._id}`} style={{ textDecoration: "none" }}>
+            <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px", transition: "var(--transition-color)" }}
+              onMouseEnter={(e) => e.currentTarget.style.color = "var(--accent-sage)"}
+              onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-primary)"}
+            >{data.title || "Untitled"}</h3>
+            <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "var(--space-2)" }}>{data.author || "Unknown"}</p>
+          </Link>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-3)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star key={s} size={10}
+                  fill={s <= stars ? "var(--accent-gold)" : "none"}
+                  stroke={s <= stars ? "var(--accent-gold)" : "var(--border-medium)"}
+                  strokeWidth={1.5}
+                />
+              ))}
+            </div>
+            <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--accent-sage)" }}>₹{data.price || "—"}</span>
+          </div>
+
+          <button
+            onClick={handleRemove}
+            disabled={removing}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "var(--space-1)",
+              padding: "var(--space-2) 0",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "var(--text-xs)",
+              fontWeight: 500,
+              border: `1px solid var(--border)`,
+              color: "var(--text-muted)",
+              background: "transparent",
+              cursor: removing ? "not-allowed" : "pointer",
+              transition: "var(--transition-color)",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent-danger)"; e.currentTarget.style.color = "var(--accent-danger)"; e.currentTarget.style.background = "var(--accent-danger-bg)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "transparent"; }}
+          >
+            <Trash2 size={11} /> Remove
+          </button>
+        </div>
       </div>
-      <h2 className="text-black text-xl font-semibold flex justify-center overflow-hidden" title={data.title}>
-        {data.title || "Untitled"}
-      </h2>
-      <p className="text-black text-xl font-semibold flex justify-center">by {data.author || "Unknown Author"}</p>
-      <p className="text-black text-xl font-semibold relative left-[90px] justify-center mb-2">₹ {data.price || "N/A"}</p>
-      <p className="text-black text-xl flex mb-3">
-        Rating: &nbsp; <Rating rating={data.ratings} /> {/* <-- Use component */}
-      </p>
-      <button
-        className="bg-[#f8ca58] text-2xl px-7 py-2 rounded border mt-2"
-        onClick={handleRemoveBook}
-      >
-        Remove from Favorite
-      </button>
-      {showAlert && (
-        <CustomAlert
-          message={alertMessage}
-          onClose={() => setShowAlert(false)}
-        />
-      )}
-    </div>
+      {showAlert && <CustomAlert message={alertMessage} onClose={() => setShowAlert(false)} />}
+    </>
   );
 };
 

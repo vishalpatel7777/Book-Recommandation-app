@@ -1,133 +1,92 @@
-import React, { useEffect, useState, useRef } from "react";
-// import axios from "axios"; // <-- Unused import removed
-import BookCard from "../card/BookCard"; // <-- Corrected path
-import Loader from "../../common/Loader/Loader"; // <-- Corrected path
-import { useNavigate } from "react-router-dom";
-import api from "../../../services/axios"; // <-- Corrected path
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import BookCard from "../Card/BookCard";
+import Loader from "../../common/Loader/Loader";
+import api from "../../../services/axios";
 
 const RecommendedBooks = () => {
   const [books, setBooks] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const sliderRef = useRef(null);
-  const bookCardWidth = 350;
-
-  const navigate = useNavigate();
+  const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    const fetchRecommendedBooks = async () => {
-      try {
-        const headers = {
-          id: localStorage.getItem("id"),
-          authorization: `Bearer ${localStorage.getItem("token")}`,
-        };
-        const response = await api.get(
-          `/get-recommended-books`,
-          { headers }
-        );
-        setBooks(response.data.data || []);
-      } catch (error) {
-        console.error("Error fetching recommended books:", error);
-        setBooks([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRecommendedBooks();
+    api.get("/get-recommended-books")
+      .then((r) => setBooks(r.data?.data ?? []))
+      .catch(() => setBooks([]))
+      .finally(() => setLoading(false));
   }, []);
 
-  const handlePrev = () => {
-    if (!books || books.length === 0) return;
-    setCurrentIndex(
-      (prevIndex) => (prevIndex - 1 + books.length) % books.length
-    );
-  };
+  const VISIBLE = 5;
+  const total = books?.length || 0;
 
-  const handleNext = () => {
-    if (!books || books.length === 0) return;
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % books.length);
-  };
+  const prev = () => setIdx((i) => Math.max(0, i - 1));
+  const next = () => setIdx((i) => Math.min(total - VISIBLE, i + 1));
+
+  const visible = books?.slice(idx, idx + VISIBLE) ?? [];
 
   return (
-    <div className="mt-8 px-4 overflow-x-hidden">
-      <div className="border-b-4 border-gray-400 flex items-center gap-4 px-4 pb-2">
-        <span className="material-symbols-outlined text-4xl">recommend</span>
-        <h2 className="text-3xl font-semibold font-caveat">
-          Recommended Books
-        </h2>
-        <div onClick={() => navigate("/allbooks")}>
-          <div className="ml-auto flex items-center cursor-pointer">
-            <h3 className="text-2xl">See all</h3>
-            <span className="material-symbols-outlined text-2xl ml-2">
-              keyboard_double_arrow_right
-            </span>
-          </div>
+    <div style={{ padding: "var(--space-10) var(--space-4)", maxWidth: "80rem", margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-7)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <Sparkles size={14} style={{ color: "var(--accent-sage)" }} />
+          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-lg)", fontWeight: 600, color: "var(--text-primary)", letterSpacing: "var(--tracking-snug)" }}>Recommended For You</h2>
         </div>
-      </div>
-      {loading && (
-        <div className="flex items-center justify-center mt-6">
-          <Loader />
-        </div>
-      )}
-      {!loading && books && books.length > 0 ? (
-        <div className="relative my-9">
-          <div
-            ref={sliderRef}
-            className="overflow-hidden w-full"
-            style={{ maxWidth: `${bookCardWidth}px`, margin: "0 auto" }}
-          >
-            <div
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{
-                transform: `translateX(-${currentIndex * bookCardWidth}px)`,
-                width: `${books.length * bookCardWidth}px`,
-              }}
-            >
-              {books.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex-shrink-0"
-                  style={{ width: `${bookCardWidth}px` }}
-                >
-                  <BookCard data={item} />
-                </div>
-              ))}
-            </div>
-          </div>
-          {books.length > 1 && (
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+          {total > VISIBLE && (
             <>
               <button
-                onClick={handlePrev}
-                className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full opacity-75 hover:opacity-100"
+                onClick={prev}
+                disabled={idx === 0}
+                style={{
+                  width: 28, height: 28, borderRadius: "var(--radius-sm)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "var(--bg-surface)", border: "1px solid var(--border)",
+                  color: idx === 0 ? "var(--text-faint)" : "var(--text-secondary)",
+                  cursor: idx === 0 ? "default" : "pointer", transition: "var(--transition)",
+                }}
               >
-                <span className="material-symbols-outlined">chevron_left</span>
+                <ChevronLeft size={13} />
               </button>
               <button
-                onClick={handleNext}
-                className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full opacity-75 hover:opacity-100"
+                onClick={next}
+                disabled={idx >= total - VISIBLE}
+                style={{
+                  width: 28, height: 28, borderRadius: "var(--radius-sm)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "var(--bg-surface)", border: "1px solid var(--border)",
+                  color: idx >= total - VISIBLE ? "var(--text-faint)" : "var(--text-secondary)",
+                  cursor: idx >= total - VISIBLE ? "default" : "pointer", transition: "var(--transition)",
+                }}
               >
-                <span className="material-symbols-outlined">chevron_right</span>
+                <ChevronRight size={13} />
               </button>
-              <div className="flex justify-center mt-4 space-x-2">
-                {books.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentIndex(i)}
-                    className={`w-3 h-3 rounded-full ${
-                      i === currentIndex ? "bg-gray-800" : "bg-gray-400"
-                    }`}
-                  />
-                ))}
-              </div>
             </>
           )}
         </div>
-      ) : (
-        !loading && (
-          <p className="text-center text-gray-500 mt-6">
-            No recommendations available
-          </p>
-        )
+      </div>
+
+      {loading && <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-12) 0" }}><Loader /></div>}
+
+      {!loading && books && books.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-hidden">
+          {visible.map((b, i) => (
+            <motion.div
+              key={b._id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
+            >
+              <BookCard data={b} />
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {!loading && books && books.length === 0 && (
+        <p style={{ fontSize: "var(--text-sm)", textAlign: "center", padding: "var(--space-8) 0", color: "var(--text-faint)" }}>
+          Rate some books to get personalised recommendations.
+        </p>
       )}
     </div>
   );

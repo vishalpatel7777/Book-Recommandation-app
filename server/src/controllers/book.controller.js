@@ -1,89 +1,69 @@
 const bookService = require("../services/book.service");
-const User = require("../models/user.model"); // Needed for admin check
+const fs = require("fs");
 const path = require("path");
-const os = require("os");
+const {
+  RECENT_BOOKS_LIMIT,
+  RECOMMENDED_BOOKS_LIMIT,
+} = require("../config/constants");
+const { UPLOAD_DIR } = require("../config/paths");
+const asyncHandler = require("../utils/asyncHandler");
+
+const requireAdmin = (req, res) => {
+    if (!req.user || req.user.role !== "admin") {
+        res.status(403).json({ message: "Access denied: Admin only" });
+        return false;
+    }
+    return true;
+};
 
 // --- Admin Book Management Handlers ---
 
-const addBook = async (req, res, next) => {
-    try {
-        const userId = req.headers.id; 
-        const user = await User.findById(userId);
+const addBook = asyncHandler(async (req, res, next) => {
+    if (!requireAdmin(req, res)) return;
 
-        if (!user || user.role !== "admin") {
-            return res.status(403).json({ message: "Access denied: Admin only" });
-        }
-
-        const { title, author, price } = req.body || {};
-        if (!title || !author || !price || !req.file) {
-            // Cleanup temp file on failure before returning
-            if (req.file) {
-                const fullPath = path.join(os.tmpdir(), req.file.filename);
-                fs.unlinkSync(fullPath);
-            }
-            return res.status(400).json({ message: "Title, author, price, and PDF are required" });
-        }
-        
-        const fullPath = path.join(os.tmpdir(), req.file.filename);
-        
-        // Pass file details and book data to service
-        const newBook = await bookService.createBook(req.body, fullPath, req.file.filename);
-        
-        // Since the service returns the raw book, we need to add ratings for the response
-        const bookWithRatings = await bookService.getBookById(newBook._id); 
-        
-        return res.status(201).json({
-            message: "Book added successfully",
-            data: bookWithRatings || {},
-        });
-    } catch (error) {
-        next(error);
+    const { title, author, price } = req.body || {};
+    if (!title || !author || !price || !req.file) {
+        if (req.file) fs.unlinkSync(path.join(UPLOAD_DIR, req.file.filename));
+        return res.status(400).json({ message: "Title, author, price, and PDF are required" });
     }
-};
 
-const updateBook = async (req, res, next) => {
+    const fullPath = path.join(UPLOAD_DIR, req.file.filename);
+    const newBook = await bookService.createBook(req.body, fullPath, req.file.filename);
+    const bookWithRatings = await bookService.getBookById(newBook._id);
+
+    return res.status(201).json({
+        message: "Book added successfully",
+        data: bookWithRatings || {},
+    });
+});
+
+const updateBook = asyncHandler(async (req, res) => {
+    if (!requireAdmin(req, res)) return;
+
+    const bookId = req.params.id;
+    const updatedBook = await bookService.updateBook(bookId, req.body, req.file);
+    const bookWithRatings = await bookService.getBookById(updatedBook._id);
+
+    return res.status(200).json({
+        message: "Book updated successfully",
+        data: bookWithRatings || {},
+    });
+});
+
+const deleteBook = asyncHandler(async (req, res, next) => {
+    if (!requireAdmin(req, res)) return;
+
+    const { bookid } = req.headers;
     try {
-        const userId = req.headers.id;
-        const bookId = req.params.id;
-        const user = await User.findById(userId);
-
-        if (!user || user.role !== "admin") {
-            return res.status(403).json({ message: "Access denied: Admin only" });
-        }
-
-        // Pass book ID, update body, and file object to service
-        const updatedBook = await bookService.updateBook(bookId, req.body, req.file);
-        
-        const bookWithRatings = await bookService.getBookById(updatedBook._id);
-        
-        return res.status(200).json({
-            message: "Book updated successfully",
-            data: bookWithRatings || {},
-        });
-    } catch (error) {
-        next(error);
-    }
-};
-
-const deleteBook = async (req, res, next) => {
-    try {
-        const { id: userId, bookid } = req.headers;
-        const user = await User.findById(userId);
-
-        if (!user || user.role !== "admin") {
-            return res.status(403).json({ message: "Access denied: Admin only" });
-        }
-        
         await bookService.deleteBook(bookid);
-
-        return res.status(200).json({ message: "Book deleted successfully" });
     } catch (error) {
         if (error.message.includes("Book not found")) {
             return res.status(404).json({ message: error.message });
         }
-        next(error);
+        throw error;
     }
-};
+    return res.status(200).json({ message: "Book deleted successfully" });
+});
 
 // --- User Book Retrieval Handlers ---
 
@@ -98,7 +78,7 @@ const getAllBooks = async (req, res, next) => {
 
 const getRecentBooks = async (req, res, next) => {
     try {
-        const books = await bookService.getRecentBooks(4);
+        const books = await bookService.getRecentBooks(RECENT_BOOKS_LIMIT);
         return res.status(200).json({ status: "success", data: books });
     } catch (error) {
         next(error);
@@ -137,8 +117,6 @@ const getBookStats = async (req, res, next) => {
     }
 };
 
-
-// Handler for GET /get-books-by-genre
 const filterBooksByGenre = async (req, res, next) => {
     try {
         const { genres, limit } = req.query || {};
@@ -146,30 +124,21 @@ const filterBooksByGenre = async (req, res, next) => {
         if (!genres) {
             return res.status(400).json({ message: "Genres parameter is required" });
         }
-        
-        // Convert comma-separated string to array
-        const genreArray = genres.split(",").map((genre) => genre.trim());
 
+        const genreArray = genres.split(",").map((genre) => genre.trim());
         const result = await bookService.getBooksByGenres(genreArray, limit);
 
         if (result.data.length === 0) {
             return res.status(404).json({ message: result.message, data: [] });
         }
 
-        return res.json({
-            status: "success",
-            data: result.data,
-        });
+        return res.json({ status: "success", data: result.data });
     } catch (error) {
-        if (error.message.includes("Genres parameter is required")) {
-            return res.status(400).json({ message: error.message });
-        }
         next(error);
     }
 };
 
-
-// --- New Handlers for Rating/Review ---
+// --- Rating & Review ---
 
 const addRating = async (req, res, next) => {
     try {
@@ -193,10 +162,7 @@ const addReview = async (req, res, next) => {
         const result = await bookService.storeReview(userId, bookId, rating, review);
         res.status(201).json(result);
     } catch (error) {
-        if (error.message.includes("already reviewed")) {
-            return res.status(400).json({ error: error.message });
-        }
-        if (error.message.includes("Missing required review fields")) {
+        if (error.message.includes("already reviewed") || error.message.includes("Missing required review fields")) {
             return res.status(400).json({ error: error.message });
         }
         next(error);
@@ -207,9 +173,7 @@ const getRating = async (req, res, next) => {
     try {
         const { userId, bookId } = req.params;
         const rating = await bookService.getRatingByBookAndUser(userId, bookId);
-        if (!rating) {
-            return res.status(404).json({}); // Return 404 if not found
-        }
+        if (!rating) return res.status(404).json({});
         res.json(rating);
     } catch (error) {
         next(error);
@@ -220,28 +184,23 @@ const getReview = async (req, res, next) => {
     try {
         const { userId, bookId } = req.params;
         const review = await bookService.getReviewByBookAndUser(userId, bookId);
-        if (!review) {
-            return res.status(404).json({}); // Return 404 if not found
-        }
+        if (!review) return res.status(404).json({});
         res.json(review);
     } catch (error) {
         next(error);
     }
 };
 
-// --- Recommendation Handler ---
+// --- Recommendation ---
 
 const getRecommendedBooks = async (req, res, next) => {
     try {
-        // userId can be taken from req.user if authenticated, but here it's public
-        const recommendedBooks = await bookService.fetchRecommendedBooks(4);
+        const recommendedBooks = await bookService.fetchRecommendedBooks(RECOMMENDED_BOOKS_LIMIT);
         res.status(200).json({ data: recommendedBooks });
     } catch (error) {
         next(error);
     }
 };
-
-
 
 module.exports = {
     addBook,
@@ -257,5 +216,5 @@ module.exports = {
     addReview,
     getRating,
     getReview,
-    getRecommendedBooks,  
+    getRecommendedBooks,
 };

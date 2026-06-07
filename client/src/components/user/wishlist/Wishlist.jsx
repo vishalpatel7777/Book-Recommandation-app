@@ -1,68 +1,50 @@
 import React, { useEffect, useState } from "react";
-// import axios from "axios"; // <-- Unused import removed
-import Loader from "../../common/Loader/Loader"; // <-- Corrected path
-import WishlistBookCard from "../../books/card/WishlistBookCard"; // <-- Corrected path
-import { FaBook } from "react-icons/fa";
-import api from '../../../services/axios'; // <-- Corrected path
+import { motion, AnimatePresence } from "framer-motion";
+import { BookHeart } from "lucide-react";
+import Loader from "../../common/Loader/Loader";
+import WishlistBookCard from "../../books/Card/WishlistBookCard";
+import api from "../../../services/axios";
 
 const Wishlist = () => {
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const headers = {
-    id: localStorage.getItem("id"),
-    authorization: `Bearer ${localStorage.getItem("token")}`,
-  };
-
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get("/get-all-wishlist", { headers });
-        setWishlist(response.data.data || []);
-      } catch (error) {
-        console.error("Error fetching wishlist:", error);
-        setWishlist([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
+    api.get("/get-all-wishlist")
+      .then((r) => setWishlist(r.data?.data ?? []))
+      .catch(() => setWishlist([]))
+      .finally(() => setLoading(false));
   }, []);
 
+  if (loading) return <div style={{ padding: "var(--space-12) 0", display: "flex", justifyContent: "center" }}><Loader /></div>;
+
   return (
-    <>
-      {loading && (
-        <div className="h-screen flex items-center justify-center">
-          <Loader />
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-5)" }}>
+        <BookHeart size={15} style={{ color: "var(--accent-danger)" }} />
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-base)", fontWeight: 600, color: "var(--text-primary)" }}>Your Wishlist</h2>
+        {wishlist.length > 0 && (
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginLeft: "var(--space-1)" }}>— {wishlist.length} saved</span>
+        )}
+      </div>
+
+      {!wishlist.length ? (
+        <div style={{ padding: "var(--space-12) 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)" }}>
+          <BookHeart size={28} style={{ color: "var(--border-medium)" }} />
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>No books saved yet.</p>
         </div>
-      )}
-      {!loading && wishlist.length === 0 && (
-        <div
-          className="text-4xl font-semibold flex text-zinc-700 h-[100%] items-center justify-center gap-5"
-          style={{ textAlign: "center", padding: "20px" }}
-        >
-          <p>No Books In Your Wishlist</p>
-          <FaBook
-            className="book-pulse"
-            style={{ fontSize: "2.5rem", color: "#c87e70", marginBottom: "10px" }}
-          />
-        </div>
-      )}
-      {!loading && wishlist.length > 0 && (
-        <div>
-          <h1 className="text-3xl ml-2 font-semibold">Wishlist</h1>
-          <div className="border-b-[4px] border-gray-400 rounded-2xl top-2 mb-8 relative w-[870px]"></div>
-          <div className="grid grid-cols-3">
-            {wishlist.map((book) => (
-              <div key={book._id}>
-                <WishlistBookCard data={book} wishlist={true} />
-              </div>
+      ) : (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <AnimatePresence>
+            {wishlist.map((book, i) => (
+              <motion.div key={book._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+                <WishlistBookCard data={book} />
+              </motion.div>
             ))}
-          </div>
-        </div>
+          </AnimatePresence>
+        </motion.div>
       )}
-    </>
+    </div>
   );
 };
 

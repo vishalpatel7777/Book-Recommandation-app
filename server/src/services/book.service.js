@@ -1,11 +1,19 @@
+const mongoose = require("mongoose");
+const path = require("path");
+const os = require("os");
 const Book = require("../models/book.model");
-const Purchase = require("../models/purchase.model");
 const Order = require("../models/order.model");
 const { addRatingsToBooks } = require("../utils/helpers");
-const { uploadToGoogleDrive, cleanupLocalFile } = require("../utils/s3Helper"); // Google Drive helper
+const { uploadToGoogleDrive, cleanupLocalFile } = require("../utils/s3Helper");
 const Review = require("../models/review.model");
 const Rating = require("../models/rating.model");
-// --- CRUD Operations ---
+const {
+  RECENT_BOOKS_LIMIT,
+  RECOMMENDED_BOOKS_LIMIT,
+  TOP_BOOKS_LIMIT,
+  GENRE_BOOKS_DEFAULT_LIMIT,
+} = require("../config/constants");
+
 
 const createBook = async (bookData, tempFilePath, tempFileName) => {
     const pdfUrl = await uploadToGoogleDrive(tempFilePath, tempFileName);
@@ -46,15 +54,15 @@ const deleteBook = async (bookId) => {
 
 // --- Retrieval Operations ---
 
-const getAllBooks = async () => {
-    const books = await Book.find().sort({ createdAt: -1 });
-    return await addRatingsToBooks(books);
+const findSortedBooks = async (query = {}, limit = null) => {
+    let q = Book.find(query).sort({ createdAt: -1 });
+    if (limit) q = q.limit(limit);
+    return addRatingsToBooks(await q);
 };
 
-const getRecentBooks = async (limit = 4) => {
-    const books = await Book.find().sort({ createdAt: -1 }).limit(limit);
-    return await addRatingsToBooks(books);
-};
+const getAllBooks = () => findSortedBooks();
+
+const getRecentBooks = (limit = RECENT_BOOKS_LIMIT) => findSortedBooks({}, limit);
 
 const getBookById = async (id) => {
     const book = await Book.findById(id);
@@ -65,30 +73,23 @@ const getBookById = async (id) => {
     return bookWithRatings[0];
 };
 
-const searchBooks = async (searchQuery) => {
-    let query = {};
-    if (searchQuery) {
-        query = {
-            $or: [
-                { title: { $regex: searchQuery, $options: "i" } },
-                { author: { $regex: searchQuery, $options: "i" } },
-            ],
-        };
-    }
-    const books = await Book.find(query).sort({ createdAt: -1 });
-    return await addRatingsToBooks(books);
+const searchBooks = (searchQuery) => {
+    const query = searchQuery
+        ? { $or: [{ title: { $regex: searchQuery, $options: "i" } }, { author: { $regex: searchQuery, $options: "i" } }] }
+        : {};
+    return findSortedBooks(query);
 };
 
 const getBookStats = async () => {
     // Note: Top rated books should be calculated by aggregation, but for simplicity, using the current logic:
-    const topRatedBooks = await Book.find().sort({ ratings: -1 }).limit(5); 
-    const trendingBooks = await Book.find().sort({ createdAt: -1 }).limit(5);
+    const topRatedBooks = await Book.find().sort({ ratings: -1 }).limit(TOP_BOOKS_LIMIT);
+    const trendingBooks = await Book.find().sort({ createdAt: -1 }).limit(TOP_BOOKS_LIMIT);
 
     const mostPurchasedBooks = await Order.aggregate([
         { $unwind: "$books" },
         { $group: { _id: "$books", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
-        { $limit: 5 },
+        { $limit: TOP_BOOKS_LIMIT },
         { $lookup: { from: "books", localField: "_id", foreignField: "_id", as: "book" } },
         { $unwind: "$book" },
     ]);
@@ -97,7 +98,7 @@ const getBookStats = async () => {
 };
 
 
-const getBooksByGenres = async (genres, limit = 10) => {
+const getBooksByGenres = async (genres, limit = GENRE_BOOKS_DEFAULT_LIMIT) => {
     if (!genres || genres.length === 0) {
         throw new Error("Genres parameter is required");
     }
@@ -109,7 +110,7 @@ const getBooksByGenres = async (genres, limit = 10) => {
         genre: { $in: regexArray }
     })
         .sort({ createdAt: -1 })
-        .limit(parseInt(limit) || 10);
+        .limit(parseInt(limit) || GENRE_BOOKS_DEFAULT_LIMIT);
 
     if (!books || books.length === 0) {
         return { message: "No books found for these genres", data: [] };
@@ -165,7 +166,7 @@ const getReviewByBookAndUser = async (userId, bookId) => {
 
 // --- Recommendation Service ---
 
-const fetchRecommendedBooks = async (limit = 4) => {
+const fetchRecommendedBooks = async (limit = RECOMMENDED_BOOKS_LIMIT) => {
     const ratings = await Rating.find().populate("user book");
     const validRatings = ratings.filter((r) => r.user && r.book);
 

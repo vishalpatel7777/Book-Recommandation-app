@@ -31,3 +31,6 @@ scripts
 jobs
 tests
 
+.claude
+extra
+graphify-out

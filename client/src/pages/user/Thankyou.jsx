@@ -1,43 +1,55 @@
 import React from "react";
-import ThankYouImage from "../../assets/images/thank-you.png"; // Path relative to src/pages/user/
-import "../../assets/styles/pages/thankyou.css"; // Path relative to src/pages/user/
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { CheckCircle, Download, ArrowRight } from "lucide-react";
 
-const Thankyou = () => { // Renamed component
+const Thankyou = () => {
   const handleDownload = () => {
-    // In a real app, you'd get the PDF URL (e.g., from useLocation state)
-    // const pdfUrl = location.state?.pdfUrl;
-    // if (pdfUrl) {
-    //   window.location.href = pdfUrl; // Or use a library for download
-    // } else {
-    //   alert("Download link not found!");
-    // }
     alert("Your PDF download will start soon!");
   };
 
   return (
-    <div className="thankyou relative min-h-screen pt-[121px]">
-      <img className="thank-you-img"
-        src={ThankYouImage}
-        alt="thankyou"
-        style={{ maxWidth: "100%", height: "auto" }} // Optional inline styling
-      />
-      <button className="thankyou-btn" onClick={handleDownload} style={buttonStyle}>
-        Download your PDF file!!
-      </button>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 var(--space-4)", background: "var(--bg-page)" }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        style={{ width: "100%", maxWidth: "24rem", textAlign: "center" }}
+      >
+        <div style={{ borderRadius: "var(--radius-sm)", padding: "var(--space-10)", background: "var(--bg-card)", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" }}>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            style={{
+              width: 64, height: 64, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto var(--space-6)",
+              background: "var(--accent-sage-bg)", border: "1px solid var(--accent-sage-mid)",
+            }}
+          >
+            <CheckCircle size={28} style={{ color: "var(--accent-sage)" }} />
+          </motion.div>
+
+          <h1 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-2xl)", fontWeight: 600, color: "var(--text-primary)", marginBottom: "var(--space-3)" }}>Order Confirmed</h1>
+          <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-8)", fontSize: "var(--text-sm)", lineHeight: "var(--leading-relaxed)" }}>
+            Thank you for your purchase. Your book is ready to download — we hope you enjoy every page.
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            <button onClick={handleDownload} className="btn btn-primary w-full flex items-center justify-center gap-2">
+              <Download size={14} /> Download PDF
+            </button>
+            <Link to="/home" style={{ textDecoration: "none" }}>
+              <button className="btn btn-secondary w-full flex items-center justify-center gap-2">
+                Continue Browsing <ArrowRight size={13} />
+              </button>
+            </Link>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 };
 
-// Optional: Add custom styles (or move to CSS file)
-const buttonStyle = {
-  backgroundColor: "#63918b",
-  color: "#fff",
-  padding: "10px 20px",
-  fontSize: "16px",
-  border: "none",
-  borderRadius: "5px",
-  cursor: "pointer",
-  marginTop: "20px",
-};
-
-export default Thankyou; // Renamed export
+export default Thankyou;

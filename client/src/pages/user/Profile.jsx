@@ -1,170 +1,176 @@
 import React, { useState, useEffect } from "react";
-import "../../assets/styles/pages/profile.css"; // Path relative to src/pages/user/
-import { useDispatch, useSelector } from "react-redux";
-// import axios from "axios"; // <-- Unused import removed
-import Loader from "../../components/common/Loader/Loader"; // <-- Corrected path
-import { Link, Outlet, useNavigate } from "react-router-dom";
-import { IoIosLogOut } from "react-icons/io";
-// Import the correct logout action from your new auth slice
+import { useDispatch } from "react-redux";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import { LogOut, Settings, BookHeart, FileText, Shield, BookOpen, HelpCircle, User } from "lucide-react";
+import Loader from "../../components/common/Loader/Loader";
 import { logout } from "../../store/slices/auth.slice";
-import api from "../../services/axios"; // <-- Corrected path
+import api from "../../services/axios";
+
+const SIDEBAR_ITEMS = [
+  { name: "Wishlist", path: "/profile/wishlist", icon: <BookHeart size={14} /> },
+  { name: "Edit Profile", path: "/profile/edit-profile", icon: <Settings size={14} /> },
+  { name: "Blog", path: "/profile/blog", icon: <BookOpen size={14} /> },
+  { name: "Best Authors", path: "/profile/best-author", icon: <User size={14} /> },
+  { name: "FAQ", path: "/profile/faq", icon: <HelpCircle size={14} /> },
+  { name: "Terms", path: "/profile/terms", icon: <FileText size={14} /> },
+  { name: "Privacy", path: "/profile/privacy-policy", icon: <Shield size={14} /> },
+];
 
 const Profile = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [Profile, setProfile] = useState(undefined); // Start as undefined to differentiate from null error
+  const location = useLocation();
+  const [profile, setProfile] = useState(undefined);
 
-  // Removed useEffect for body styles - apply globally or via CSS if needed
-
-  // In src/pages/user/Profile.jsx
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        // 1. Check token/ID are present
-        const headers = {
-         authorization: `Bearer ${localStorage.getItem("token")}`, // CRITICAL for server verification
-        };
-
-        // 2. Make API call
-        const response = await api.get(`/user-information`, { headers });
-        setProfile(response.data);
-      } catch (error) {
-        // 3. This is where the 401/404 error is caught
-        console.error("Error fetching user profile:", error);
+    api.get("/user-information")
+      .then((r) => setProfile(r.data))
+      .catch((err) => {
         setProfile(null);
-        if (error.response?.status === 401 || error.response?.status === 403) {
-          navigate("/login"); // This redirects the user if the token is bad
-        }
-      }
-    };
-    fetch();
+        if (err.response?.status === 401 || err.response?.status === 403) navigate("/login");
+      });
   }, []);
+
   const handleLogout = () => {
-    const confirmLogout = window.confirm("Are you sure you want to logout?");
-    if (confirmLogout) {
-      dispatch(logout()); // <-- Use the correct logout action
-      // No need to remove localStorage items manually, the reducer does it
-      navigate("/");
-      // Optional: window.location.reload() if you need a hard refresh, but usually not necessary
-    }
+    dispatch(logout());
+    navigate("/");
   };
 
-  // Loading state
-  if (Profile === undefined) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader />
-      </div>
-    );
-  }
+  if (profile === undefined) return (
+    <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-page)" }}>
+      <Loader />
+    </div>
+  );
 
-  // Error state
-  if (Profile === null) {
-    return (
-      <div className="flex items-center justify-center h-screen text-red-500">
-        Error loading profile. Please try logging in again.
-      </div>
-    );
-  }
+  if (profile === null) return (
+    <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-page)" }}>
+      <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>
+        Could not load profile.{" "}
+        <button onClick={() => navigate("/login")} style={{ color: "var(--accent-sage)", background: "none", border: "none", cursor: "pointer" }}>Sign in</button>
+      </p>
+    </div>
+  );
+
+  const isBase = location.pathname === "/profile" || location.pathname === "/profile/";
+  const initials = (profile.fullname || profile.username || "U").charAt(0).toUpperCase();
 
   return (
-    <div className="profile-page relative pt-[121px] overflow-x-hidden">
-      {/* Profile content renders only if Profile is successfully fetched */}
-      <div className="gap-3 flex w-full p-4 h-auto min-h-[calc(100vh-121px)]">
-        {" "}
-        {/* Ensure minimum height */}
-        <div className="w-full md:w-1/6 flex flex-col bg-[#e2e3e4] p-4 rounded-l-lg">
-          {" "}
-          {/* Added rounding */}
-          <ul className="space-y-4 pt-24 pb-24">
-            {[
-              { name: "Wishlist", path: "/profile/wishlist" },
-              { name: "Terms & Conditions", path: "/profile/terms" },
-              { name: "Privacy Policy", path: "/profile/privacy-policy" },
-              { name: "Blog", path: "/profile/blog" },
-              { name: "Best Author", path: "/profile/best-author" },
-              { name: "FAQ", path: "/profile/faq" },
-            ].map((item, index) => (
-              <li key={index}>
-                <Link
-                  to={item.path}
-                  className="text-black hover:text-blue-500 transition duration-300 bg-white p-2 block rounded-md"
-                >
-                  {item.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="w-full md:w-3/10 bg-[#e2e3e4] p-4 h-auto rounded-r-lg md:rounded-l-none">
-          {" "}
-          {/* Added rounding */}
-          <div className="flex flex-col items-center">
-            <img
-              src={Profile.image || "default-avatar.png"}
-              alt="profile-pic"
-              className="w-[131px] h-[131px] rounded-full object-cover border-2 border-gray-300 shadow-md"
-            />{" "}
-            {/* Added fallback and styling */}
-            <p className="profile-suggestion mt-3 text-[24px] pl-4 pt-1 font-medium">
-              @{Profile.username}
-            </p>
-            <div className="box bg-white mt-5 p-7 rounded-md shadow-inner">
-              {" "}
-              {/* Added rounding and shadow */}
-              <p className="text-[24px] text-black font-semibold">
-                Name:{" "}
-                <span className="text-[24px] font-normal">
-                  {Profile.fullname || "N/A"}
-                </span>
-                
-              </p>
-              <p className="text-[24px] text-black font-semibold">
-                Email:{" "}
-                <span className="text-[24px] font-normal">
-                  {Profile.email || "N/A"}
-                </span>
-              </p>
-              <p className="text-[24px] text-black font-semibold">
-                Age:{" "}
-                <span className="text-[24px] font-normal">
-                  {Profile.age || "N/A"}
-                </span>
-              </p>
-              <p className="text-[24px] text-black font-semibold">
-                Favorite Book Genre:{" "}
-                <span className="text-[24px] font-normal">
-                  {Profile.genre || "N/A"}
-                </span>
-              </p>
-              <p className="text-[24px] text-black font-semibold">
-                Phone Number:{" "}
-                <span className="text-[24px] font-normal">
-                  +91 {Profile.phone || "N/A"}
-                </span>
-              </p>
+    <div style={{ minHeight: "100vh", padding: "var(--space-10) var(--space-6)", maxWidth: "72rem", margin: "0 auto", background: "var(--bg-page)" }}>
+      <div style={{ display: "flex", gap: "var(--space-8)" }}>
+        {/* Sidebar */}
+        <div style={{ width: "13rem", flexShrink: 0 }}>
+          <div style={{ borderRadius: "var(--radius-sm)", overflow: "hidden", position: "sticky", top: "6rem", background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+            {/* User card */}
+            <div style={{ padding: "var(--space-5)", textAlign: "center", borderBottom: "1px solid var(--border-light)", background: "var(--bg-surface)" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", overflow: "hidden", margin: "0 auto var(--space-3)", border: "2px solid var(--border-medium)" }}>
+                {profile.image ? (
+                  <img src={profile.image} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--text-lg)", fontWeight: 600, background: "var(--accent-sage)", color: "#fff", fontFamily: "var(--font-heading)" }}>
+                    {initials}
+                  </div>
+                )}
+              </div>
+              <p style={{ fontSize: "var(--text-sm)", fontFamily: "var(--font-heading)", fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>@{profile.username}</p>
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.email}</p>
             </div>
-            <div className="button mt-4 flex gap-10">
+
+            {/* Nav */}
+            <nav style={{ padding: "var(--space-2)" }}>
+              {SIDEBAR_ITEMS.map((item) => {
+                const active = location.pathname === item.path;
+                return (
+                  <Link key={item.path} to={item.path} style={{ textDecoration: "none" }}>
+                    <div
+                      style={{
+                        display: "flex", alignItems: "center", gap: "var(--space-2)",
+                        padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-sm)",
+                        fontSize: "var(--text-sm)", marginBottom: "1px", cursor: "pointer",
+                        background: active ? "var(--accent-sage-bg)" : "transparent",
+                        color: active ? "var(--accent-sage-text)" : "var(--text-secondary)",
+                        fontWeight: active ? 500 : 400,
+                        borderLeft: active ? "2px solid var(--accent-sage)" : "2px solid transparent",
+                        transition: "var(--transition)",
+                      }}
+                      onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = "var(--bg-surface)"; e.currentTarget.style.color = "var(--text-primary)"; } }}
+                      onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-secondary)"; } }}
+                    >
+                      <span style={{ color: active ? "var(--accent-sage)" : "var(--text-muted)" }}>{item.icon}</span>
+                      {item.name}
+                    </div>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Logout */}
+            <div style={{ padding: "var(--space-2)", borderTop: "1px solid var(--border-light)" }}>
               <button
-                className="flex items-center justify-center p-10 text-[24px] bg-[#2e86a7] hover:bg-[#22609b] text-white h-[45px] w-[130px] rounded-full pt-1 font-medium shadow-md" // Added text-white
-                onClick={() => navigate("/profile/edit-profile")}
-              >
-                Setting
-              </button>
-              <button
-                className="flex items-center justify-center p-4 text-[24px] bg-[#a64675] hover:bg-[#bb4e71] text-white h-[45px] w-[130px] rounded-full pt-1 font-medium shadow-md" // Added text-white
                 onClick={handleLogout}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", gap: "var(--space-2)",
+                  padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-sm)",
+                  fontSize: "var(--text-sm)", color: "var(--accent-danger)",
+                  background: "none", border: "none", cursor: "pointer", transition: "var(--transition)",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(184,84,80,0.06)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
               >
-                Logout <IoIosLogOut className="ms-2" /> {/* Adjusted margin */}
+                <LogOut size={14} /> Sign out
               </button>
             </div>
           </div>
         </div>
-        {/* Render nested profile routes (Wishlist, Terms, etc.) */}
-        <div className="w-full md:w-6/10 bg-[#e2e3e4] p-4 h-auto rounded-r-lg">
-          {" "}
-          {/* Adjusted width, Added rounding */}
-          <Outlet />
+
+        {/* Main */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {isBase ? (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <div style={{ borderRadius: "var(--radius-sm)", padding: "var(--space-6)", marginBottom: "var(--space-4)", background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+                <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-xl)", fontWeight: 600, color: "var(--text-primary)", marginBottom: "var(--space-5)" }}>
+                  Your Library
+                </h2>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {[
+                    { label: "Full Name", value: profile.fullname || "—" },
+                    { label: "Username", value: `@${profile.username}` },
+                    { label: "Email", value: profile.email || "—" },
+                    { label: "Phone", value: profile.phone ? `+91 ${profile.phone}` : "—" },
+                    { label: "Age", value: profile.age || "—" },
+                    { label: "Favourite Genre", value: profile.genre || "—" },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{ padding: "var(--space-4)", borderRadius: "var(--radius-sm)", background: "var(--bg-surface)", border: "1px solid var(--border-light)" }}>
+                      <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "var(--tracking-wider)", marginBottom: "var(--space-1)" }}>{label}</p>
+                      <p style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: "var(--space-5)" }}>
+                  <button
+                    onClick={() => navigate("/profile/edit-profile")}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "var(--space-2)",
+                      padding: "var(--space-2) var(--space-4)", borderRadius: "var(--radius-sm)",
+                      fontSize: "var(--text-sm)", fontWeight: 500,
+                      border: "1px solid var(--border-medium)", color: "var(--text-secondary)",
+                      background: "var(--bg-card)", cursor: "pointer", transition: "var(--transition)",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent-sage)"; e.currentTarget.style.color = "var(--accent-sage)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border-medium)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+                  >
+                    <Settings size={13} /> Edit Profile
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <div style={{ borderRadius: "var(--radius-sm)", overflow: "hidden", background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+              <div style={{ padding: "var(--space-6)" }}>
+                <Outlet />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

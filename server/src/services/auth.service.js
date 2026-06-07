@@ -4,6 +4,7 @@ const { sendMail } = require("../utils/mailer");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
+const { JWT_EXPIRES_IN, PASSWORD_RESET_EXPIRY_MS } = require("../config/constants");
 
 // Helper to generate JWT token
 const generateAuthToken = (user) => {
@@ -14,8 +15,8 @@ const generateAuthToken = (user) => {
     };
     return jwt.sign(
         authClaims,
-        process.env.JWT_SECRET || "bookMosaic017",
-        { expiresIn: "30d" }
+        process.env.JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
     );
 };
 
@@ -165,7 +166,7 @@ const initiatePasswordReset = async (email) => {
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetTokenExpiry = Date.now() + 3600000; // 1 hour expiry
+    const resetTokenExpiry = Date.now() + PASSWORD_RESET_EXPIRY_MS;
 
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpiry = resetTokenExpiry;

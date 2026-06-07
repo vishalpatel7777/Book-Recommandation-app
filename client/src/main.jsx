@@ -1,12 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import './index.css'; // Correct path
+import './index.css';
 import { RouterProvider } from "react-router-dom";
-// --- Corrected Router Import Path ---
-import router from "./routes/index.jsx"; 
-// import { BrowserRouter as Router } from "react-router-dom"; // <-- Unused import removed
+import router from "./routes/index.jsx";
 import { Provider } from "react-redux";
-import store from "./store/index.js"; // Correct path
+import store from "./store/index.js";
+import { injectThemeVariables } from "./utils/injectTheme.js";
+
+// Inject all theme.config.js tokens as CSS custom properties before first render
+injectThemeVariables();
+
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

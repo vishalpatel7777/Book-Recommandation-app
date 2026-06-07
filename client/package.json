@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
+    "lint": "eslint src",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -20,6 +20,7 @@
     "axios": "^1.8.3",
     "framer-motion": "^12.5.0",
     "localforage": "^1.10.0",
+    "lucide-react": "^1.17.0",
     "match-sorter": "^8.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -1,27 +1,28 @@
-import { Outlet } from 'react-router-dom';
-import AdminHome from '../components/admin/AdminHome';
-import AdminDashboard from '../components/admin/AdminDashboard';
-import DailyStats from '../components/admin/dashboard/DailyStats';
-import UserActivity from '../components/admin/dashboard/UserActivity';
-import BookAnalytics from '../components/admin/dashboard/BookAnalytics';
-import MonthlyAnalytics from '../components/admin/dashboard/MonthlyStats';
-import AddBook from '../components/admin/books/AddBook';
-import EditBook from '../components/admin/books/EditBook';
-import DeleteBook from '../components/admin/books/DeleteBook';
-import AdminUser from '../components/admin/EditUser';
-import AdminProfile from '../components/admin/AdminProfile';
-import AdminSettings from '../components/admin/AdminSetting';
+import { lazy } from 'react';
+import PATHS from '../config/paths';
 
-// --- IMPORT THE NEW LAYOUT ---
-import AdminBooks from '../components/admin/AdminBooks'; 
+const AdminHome = lazy(() => import('../components/Admin/AdminHome'));
+const AdminDashboard = lazy(() => import('../components/Admin/AdminDashboard'));
+const DailyStats = lazy(() => import('../components/Admin/DashBoard/DailyStats'));
+const UserActivity = lazy(() => import('../components/Admin/DashBoard/UserActivity'));
+const BookAnalytics = lazy(() => import('../components/Admin/DashBoard/BookAnalytics'));
+const MonthlyAnalytics = lazy(() => import('../components/Admin/DashBoard/MonthlyStats'));
+const AddBook = lazy(() => import('../components/Admin/Books/AddBook'));
+const EditBook = lazy(() => import('../components/Admin/Books/EditBook'));
+const DeleteBook = lazy(() => import('../components/Admin/Books/DeleteBook'));
+const AdminUser = lazy(() => import('../components/Admin/EditUser'));
+const AdminProfile = lazy(() => import('../components/Admin/AdminProfile'));
+const AdminSettings = lazy(() => import('../components/Admin/AdminSetting'));
+const AdminBooks = lazy(() => import('../components/Admin/AdminBooks'));
+const AdminCMS = lazy(() => import('../pages/admin/AdminCMS'));
 
 const adminRoutes = [
   {
-    path: '/admin/home',
+    path: PATHS.ADMIN_HOME,
     element: <AdminHome />,
   },
   {
-    path: '/admin/dashboard',
+    path: PATHS.ADMIN_DASHBOARD,
     element: <AdminDashboard />,
     children: [
       { path: 'daily-stats', element: <DailyStats /> },
@@ -31,35 +32,29 @@ const adminRoutes = [
     ],
   },
   {
-    path: '/admin/books',
-    // --- USE THE NEW LAYOUT HERE ---
-    element: <AdminBooks />, // Was previously <Outlet />
+    path: PATHS.ADMIN_BOOKS,
+    element: <AdminBooks />,
     children: [
-      {
-        path: 'add-book', // Relative path: /admin/books/add-book
-        element: <AddBook />,
-      },
-      {
-        path: 'edit-books',
-        element: <EditBook />,
-      },
-      {
-        path: 'delete-book',
-        element: <DeleteBook />,
-      },
+      { path: 'add-book', element: <AddBook /> },
+      { path: 'edit-books', element: <EditBook /> },
+      { path: 'delete-book', element: <DeleteBook /> },
     ],
   },
   {
-    path: '/admin/users',
+    path: PATHS.ADMIN_USERS,
     element: <AdminUser />,
   },
   {
-    path: '/admin/profile',
+    path: PATHS.ADMIN_PROFILE,
     element: <AdminProfile />,
   },
   {
-    path: '/admin/settings',
+    path: PATHS.ADMIN_SETTINGS,
     element: <AdminSettings />,
+  },
+  {
+    path: PATHS.ADMIN_CMS,
+    element: <AdminCMS />,
   },
 ];
 

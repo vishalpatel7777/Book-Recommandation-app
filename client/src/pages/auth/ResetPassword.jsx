@@ -1,8 +1,21 @@
 import React, { useState } from "react";
-// import axios from "axios"; // <-- Unused import removed
 import { useParams, useNavigate } from "react-router-dom";
-import CustomAlert from "../../components/common/Alert/CustomAlert"; // <-- Corrected path
-import api from "../../services/axios"; // <-- Corrected path
+import { Lock } from "lucide-react";
+import CustomAlert from "../../components/common/Alert/CustomAlert";
+import api from "../../services/axios";
+
+const inputStyle = {
+  width: "100%",
+  padding: "0.6rem 0.875rem",
+  background: "var(--bg-card)",
+  border: "1px solid var(--border-medium)",
+  borderRadius: "var(--radius-sm)",
+  color: "var(--text-primary)",
+  fontSize: "var(--text-sm)",
+  fontFamily: "var(--font-body)",
+  outline: "none",
+  transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+};
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -11,6 +24,15 @@ const ResetPassword = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const { token } = useParams();
   const navigate = useNavigate();
+
+  const focusFn = (e) => {
+    e.target.style.borderColor = "var(--accent-sage)";
+    e.target.style.boxShadow = "0 0 0 3px var(--accent-sage-ring)";
+  };
+  const blurFn = (e) => {
+    e.target.style.borderColor = "var(--border-medium)";
+    e.target.style.boxShadow = "none";
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,10 +47,7 @@ const ResetPassword = () => {
       const response = await api.post(`/reset-password/${token}`, { password });
       setAlertMessage(response.data.message);
       setShowAlert(true);
-      setTimeout(() => {
-        setShowAlert(false);
-        navigate("/login");
-      }, 2000);
+      setTimeout(() => { setShowAlert(false); navigate("/login"); }, 2000);
     } catch (error) {
       setAlertMessage(error.response?.data?.message || "Failed to reset password");
       setShowAlert(true);
@@ -37,33 +56,41 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
-        <h2 className="text-2xl font-bold mb-4 text-center">Reset Password</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="password" className="block text-gray-700">New Password</label>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-page)", padding: "0 var(--space-4)" }}>
+      <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "var(--space-8)", width: "100%", maxWidth: "24rem", boxShadow: "var(--shadow-card)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-6)" }}>
+          <div style={{ width: 32, height: 32, borderRadius: "var(--radius-sm)", background: "var(--accent-sage-bg)", border: "1px solid var(--accent-sage-mid)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Lock size={14} style={{ color: "var(--accent-sage)" }} />
+          </div>
+          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-xl)", fontWeight: 600, color: "var(--text-primary)" }}>Reset Password</h2>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "var(--text-xs)", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>New Password</label>
             <input
               type="password"
-              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="border p-2 w-full rounded"
               placeholder="Enter new password"
+              style={inputStyle}
+              onFocus={focusFn} onBlur={blurFn}
             />
           </div>
-          <div className="mb-4">
-            <label htmlFor="confirmPassword" className="block text-gray-700">Confirm Password</label>
+          <div>
+            <label style={{ display: "block", fontSize: "var(--text-xs)", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>Confirm Password</label>
             <input
               type="password"
-              id="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="border p-2 w-full rounded"
               placeholder="Confirm new password"
+              style={inputStyle}
+              onFocus={focusFn} onBlur={blurFn}
             />
           </div>
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600">Reset Password</button>
+          <button type="submit" className="btn btn-primary w-full" style={{ marginTop: "var(--space-2)" }}>
+            Reset Password
+          </button>
         </form>
       </div>
       {showAlert && <CustomAlert message={alertMessage} onClose={() => setShowAlert(false)} />}
