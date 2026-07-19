@@ -26,6 +26,21 @@ app.options("*", cors(appConfig.cors));
 app.use(globalLimiter);
 
 // --- Body parsing ---
+// Capture raw body for webhook HM  AC verification before JSON parsing
+app.use((req, res, next) => {
+    if (req.path.endsWith("/webhook")) {
+        let data = "";
+        req.setEncoding("utf8");
+        req.on("data", (chunk) => { data += chunk; });
+        req.on("end", () => {
+            req.rawBody = data;
+            try { req.body = JSON.parse(data); } catch { req.body = {}; }
+            next();
+        });
+    } else {
+        next();
+    }
+});
 app.use(express.json({ limit: appConfig.body.jsonLimit }));
 app.use(express.urlencoded({ extended: true, limit: appConfig.body.urlencodedLimit }));
 app.use(cookieParser());

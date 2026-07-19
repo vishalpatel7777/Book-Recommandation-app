@@ -55,17 +55,33 @@ const deleteBook = async (bookId) => {
 // --- Retrieval Operations ---
 
 const findSortedBooks = async (query = {}, limit = null) => {
-    let q = Book.find(query).sort({ createdAt: -1 });
+    const hiddenFilter = { accessMode: { $nin: ["hidden", "archived"] } };
+    const combined = { ...query, ...hiddenFilter };
+    let q = Book.find(combined).select("-pdf").sort({ createdAt: -1 });
     if (limit) q = q.limit(limit);
     return addRatingsToBooks(await q);
 };
 
-const getAllBooks = () => findSortedBooks();
+const getAllBooks = (page, limit) => {
+    if (page && limit) {
+        const skip = (page - 1) * limit;
+        return Book.find({})
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .then(async (books) => {
+                const total = await Book.countDocuments();
+                const data  = await addRatingsToBooks(books);
+                return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+            });
+    }
+    return findSortedBooks();
+};
 
 const getRecentBooks = (limit = RECENT_BOOKS_LIMIT) => findSortedBooks({}, limit);
 
 const getBookById = async (id) => {
-    const book = await Book.findById(id);
+    const book = await Book.findById(id).select("-pdf");
     if (!book) {
         return null;
     }
@@ -73,10 +89,12 @@ const getBookById = async (id) => {
     return bookWithRatings[0];
 };
 
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const searchBooks = (searchQuery) => {
-    const query = searchQuery
-        ? { $or: [{ title: { $regex: searchQuery, $options: "i" } }, { author: { $regex: searchQuery, $options: "i" } }] }
-        : {};
+    if (!searchQuery) return findSortedBooks({});
+    const safe = escapeRegex(String(searchQuery).slice(0, 100));
+    const query = { $or: [{ title: { $regex: safe, $options: "i" } }, { author: { $regex: safe, $options: "i" } }] };
     return findSortedBooks(query);
 };
 
@@ -103,8 +121,7 @@ const getBooksByGenres = async (genres, limit = GENRE_BOOKS_DEFAULT_LIMIT) => {
         throw new Error("Genres parameter is required");
     }
 
-    // Create an array of case-insensitive regular expressions for $in query
-    const regexArray = genres.map((g) => new RegExp(g, "i"));
+    const regexArray = genres.map((g) => new RegExp(escapeRegex(String(g).slice(0, 100)), "i"));
 
     const books = await Book.find({
         genre: { $in: regexArray }
@@ -152,6 +169,10 @@ const storeReview = async (userId, bookId, rating, reviewText) => {
     const newReview = new Review({ userId, bookId, rating: rating || 0, review: reviewText });
     await newReview.save();
     return { message: "Review submitted successfully" };
+};
+
+const getReviewsByBook = async (bookId) => {
+    return Review.find({ bookId }).sort({ createdAt: -1 }).lean();
 };
 
 const getRatingByBookAndUser = async (userId, bookId) => {
@@ -212,6 +233,20 @@ const fetchRecommendedBooks = async (limit = RECOMMENDED_BOOKS_LIMIT) => {
 
 
 
+const getBookPdf = async (bookId) => {
+    return Book.findById(bookId).select("pdf title accessMode");
+};
+
+const setBookAccessMode = async (bookId, accessMode) => {
+    const book = await Book.findByIdAndUpdate(
+        bookId,
+        { accessMode },
+        { new: true, runValidators: true }
+    ).select("-pdf");
+    if (!book) throw new Error("Book not found");
+    return book;
+};
+
 module.exports = {
     createBook,
     updateBook,
@@ -226,5 +261,8 @@ module.exports = {
     storeReview,
     getRatingByBookAndUser,
     getReviewByBookAndUser,
+    getReviewsByBook,
     fetchRecommendedBooks,
+    getBookPdf,
+    setBookAccessMode,
 };

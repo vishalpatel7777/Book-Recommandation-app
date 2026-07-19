@@ -1,5 +1,4 @@
 const userService = require("../services/user.service");
-const adminService = require("../services/admin.service"); // Used for admin-level user management
 
 // Handler for GET /user-information
 const getUserInformation = async (req, res, next) => {

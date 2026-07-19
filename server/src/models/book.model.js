@@ -13,8 +13,12 @@ const bookSchema = new mongoose.Schema(
     image: { type: String, required: true }, // URL or path to image
     ratings: { type: Number, min: 0, max: 5, default: 0 }, // Allow 0 for unrated
     pdf: { type: String, required: true }, // URL or path to the PDF file
-    // Consider adding index for frequently queried fields like title, author, genre
-    // title: { type: String, required: true, trim: true, index: true },
+    accessMode: {
+      type: String,
+      enum: ["paid", "free", "preview", "hidden", "archived"],
+      default: "paid",
+      index: true,
+    },
   },
   { timestamps: true } // Adds createdAt and updatedAt fields automatically
 );

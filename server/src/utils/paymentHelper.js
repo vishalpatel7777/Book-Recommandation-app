@@ -12,7 +12,7 @@ const CASHFREE_HEADERS = {
 };
 
 const createCashfreeOrder = async (orderData) => {
-    const { amount, currency, customer_id, customer_email, customer_phone, return_url } = orderData;
+    const { amount, currency, customer_id, customer_email, customer_phone, return_url, bookId, userId } = orderData;
     const order_id = `order_${Date.now()}`;
 
     const request = {
@@ -26,7 +26,9 @@ const createCashfreeOrder = async (orderData) => {
         },
         order_meta: {
             return_url: return_url.replace("{order_id}", order_id),
+            notify_url: process.env.WEBHOOK_URL || undefined,
         },
+        order_note: bookId && userId ? `${bookId}:${userId}` : undefined,
     };
 
     try {
@@ -50,20 +52,20 @@ const createCashfreeOrder = async (orderData) => {
 const verifyCashfreePayment = async (order_id) => {
     try {
         const response = await axios.get(
-            `${CASHFREE_API_URL}/orders/${order_id}`,
+            `${CASHFREE_API_URL}/orders/${order_id}/payments`,
             { headers: CASHFREE_HEADERS }
         );
 
-        const payments = response.data.payments || [];
+        const payments = Array.isArray(response.data) ? response.data : [];
         let orderStatus = "Failure";
 
-        if (payments.some((transaction) => transaction.payment_status === "SUCCESS")) {
+        if (payments.some((t) => t.payment_status === "SUCCESS")) {
             orderStatus = "Success";
-        } else if (payments.some((transaction) => transaction.payment_status === "PENDING")) {
+        } else if (payments.some((t) => t.payment_status === "PENDING")) {
             orderStatus = "Pending";
         }
 
-        return { order_id, status: orderStatus, details: response.data };
+        return { order_id, status: orderStatus, payments };
     } catch (error) {
         console.error("Cashfree Verification Error:", error.response?.data || error.message);
         throw new Error("Failed to verify payment with Cashfree");

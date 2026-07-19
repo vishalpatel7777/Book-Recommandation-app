@@ -1,5 +1,4 @@
 const User = require("../models/user.model");
-const bcrypt = require("bcryptjs"); // Import bcrypt for potential future use or consistency
 
 const fetchUserInformation = async (userId) => {
     const data = await User.findById(userId).select("-password");

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CreditCard, Smartphone, Building2, Wallet, Shield, ArrowLeft, CheckCircle } from "lucide-react";
 import { useSelector } from "react-redux";
+import api from "../../../services/axios";
 
 const PAYMENT_METHODS = [
   { id: "card",        label: "Credit / Debit Card", icon: CreditCard,  desc: "Visa, Mastercard, RuPay" },
@@ -21,6 +22,7 @@ function Checkout() {
   const [name, setName] = useState(authUser?.username || authUser?.fullname || "");
   const [email, setEmail] = useState(customer_email || authUser?.email || "");
   const [placing, setPlacing] = useState(false);
+  const [error, setError] = useState("");
 
   if (!book || !amount) {
     return (
@@ -34,16 +36,36 @@ function Checkout() {
   }
 
   const price = Number(amount) || 0;
-  const mockOrderId = `BM-${Date.now().toString(36).toUpperCase()}`;
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!name.trim() || !email.trim()) return;
     setPlacing(true);
-    setTimeout(() => {
-      navigate("/payment-success", {
-        state: { book, amount, customer_email: email, orderId: mockOrderId },
+    setError("");
+
+    try {
+      const { data } = await api.post("/create-payment", {
+        bookId: book._id,
+        amount: price,
+        currency: "INR",
+        customer_id: authUser?.id || authUser?._id || email,
+        customer_email: email,
+        customer_phone: authUser?.phone || "9999999999",
       });
-    }, 1800);
+
+      const { load } = await import("@cashfreepayments/cashfree-js");
+      const cashfree = await load({ mode: import.meta.env.VITE_CASHFREE_MODE === "production" ? "production" : "sandbox" });
+
+      const checkoutOptions = {
+        paymentSessionId: data.orderToken,
+        redirectTarget: "_self",
+      };
+
+      cashfree.checkout(checkoutOptions);
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || "Payment failed. Please try again.";
+      setError(msg);
+      setPlacing(false);
+    }
   };
 
   return (
@@ -232,6 +254,12 @@ function Checkout() {
                 </div>
               </div>
 
+              {error && (
+                <p style={{ fontSize: "var(--text-xs)", color: "var(--accent-danger)", marginBottom: "var(--space-4)", padding: "var(--space-2) var(--space-3)", background: "var(--accent-danger-bg, #fef2f2)", borderRadius: "var(--radius-sm)" }}>
+                  {error}
+                </p>
+              )}
+
               <button
                 onClick={handlePlaceOrder}
                 disabled={placing || !name.trim() || !email.trim()}
@@ -246,18 +274,18 @@ function Checkout() {
                 {placing ? (
                   <>
                     <span style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
-                    Processing…
+                    Redirecting to payment…
                   </>
                 ) : (
                   <>
-                    <CheckCircle size={15} /> Place Order · ₹{price}
+                    <CheckCircle size={15} /> Pay ₹{price} securely
                   </>
                 )}
               </button>
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--space-2)" }}>
                 <Shield size={11} style={{ color: "var(--text-muted)" }} />
-                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>Secure & encrypted payment</span>
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>Powered by Cashfree · 256-bit SSL</span>
               </div>
             </div>
           </div>

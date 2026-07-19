@@ -64,11 +64,17 @@ const fetchDailyStats = async () => {
 };
 
 // Service to fetch user activity list
-const fetchUserActivity = async () => {
-  const users = await User.find({}, "username email lastLogin role").sort({
-    lastLogin: -1,
-  });
-  return users;
+const fetchUserActivity = async (page, limit) => {
+  if (page && limit) {
+    const skip  = (page - 1) * limit;
+    const total = await User.countDocuments();
+    const data  = await User.find({}, "username email lastLogin role")
+      .sort({ lastLogin: -1 })
+      .skip(skip)
+      .limit(limit);
+    return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  }
+  return User.find({}, "username email lastLogin role").sort({ lastLogin: -1 });
 };
 
 // Service to fetch detailed book analytics
@@ -173,6 +179,20 @@ const fetchMonthlyAnalytics = async () => {
 };
 
 
+const fetchMonthlySignups = async () => {
+  const result = await User.aggregate([
+    {
+      $group: {
+        _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { "_id.year": -1, "_id.month": -1 } },
+    { $limit: 12 },
+  ]);
+  return result;
+};
+
 module.exports = {
   fetchAdminProfile,
   updateAdminProfile,
@@ -180,4 +200,5 @@ module.exports = {
   fetchUserActivity,
   fetchBookAnalytics,
   fetchMonthlyAnalytics,
+  fetchMonthlySignups,
 };

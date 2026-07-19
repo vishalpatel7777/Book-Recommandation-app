@@ -1,55 +1,57 @@
 const paymentService = require("../services/payment.service");
 
-// Handler for POST /create-payment
 const createPayment = async (req, res, next) => {
     try {
-        const { amount, currency, customer_id, customer_email, customer_phone } = req.body || {};
+        const { bookId, amount, currency, customer_id, customer_email, customer_phone } = req.body || {};
 
         if (!amount || !currency || !customer_id || !customer_email || !customer_phone) {
-            return res.status(400).json({ error: "Missing required fields" });
+            return res.status(400).json({ error: "Missing required fields: amount, currency, customer_id, customer_email, customer_phone" });
         }
-        
-        // Return URL format for Cashfree redirect
-        const return_url = `https://bookmosaic.netlify.app/payment-success?order_id={order_id}`;
 
-        const orderData = { amount, currency, customer_id, customer_email, customer_phone, return_url };
+        const result = await paymentService.generateOrderSession(
+            { bookId, amount, currency, customer_id, customer_email, customer_phone },
+            req.user.id
+        );
 
-        const result = await paymentService.generateOrderSession(orderData);
-
-        res.json({
-            orderToken: result.orderToken,
-            order_id: result.order_id,
-        });
+        res.json({ orderToken: result.orderToken, order_id: result.order_id });
     } catch (error) {
+        if (error.message === "Book already purchased") {
+            return res.status(409).json({ error: error.message });
+        }
         next(error);
     }
 };
 
-// Handler for POST /verify-payment
 const verifyPayment = async (req, res, next) => {
     try {
-        const { order_id } = req.body || {};
+        const { order_id, bookId, paymentMethod } = req.body || {};
         if (!order_id) {
             return res.status(400).json({ error: "Missing order_id" });
         }
 
-        const verificationResult = await paymentService.handlePaymentVerification(order_id);
-        res.json(verificationResult);
+        const result = await paymentService.handlePaymentVerification(
+            order_id,
+            req.user.id,
+            bookId,
+            paymentMethod
+        );
+
+        res.json(result);
     } catch (error) {
         next(error);
     }
 };
 
-// Handler for POST /webhook
 const handleWebhook = async (req, res, next) => {
     try {
-        // Here you should validate the webhook signature before processing
-        // ... (Webhook validation middleware is recommended but skipped for now)
-
-        await paymentService.handleWebhook(req.body);
-
+        const rawBody = req.rawBody;
+        const signatureHeader = req.headers["x-webhook-signature"];
+        await paymentService.handleWebhook(req.body, rawBody, signatureHeader);
         res.status(200).json({ success: true });
     } catch (error) {
+        if (error.message === "Webhook signature mismatch") {
+            return res.status(401).json({ error: "Invalid webhook signature" });
+        }
         next(error);
     }
 };

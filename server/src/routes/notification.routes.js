@@ -2,12 +2,11 @@ const express = require("express");
 const router = express.Router();
 const notificationController = require("../controllers/notification.controller");
 const { authenticateToken } = require("../middleware/auth.middleware");
+const { validate, validateParams } = require("../middleware/validate.middleware");
+const { addNotificationSchema, notificationIdParamSchema, notificationUserParamSchema } = require("../validators/notification.validator");
 
-// Public route to store a notification (usually called by the server after a purchase)
-router.post("/add-notification", notificationController.addNotification); 
-
-// Authenticated user routes for fetching and deleting
-router.get("/get-notifications/:userId", authenticateToken, notificationController.getNotificationsByUserId);
-router.delete("/delete-notification/:id", authenticateToken, notificationController.removeNotification);
+router.post("/add-notification", authenticateToken, validate(addNotificationSchema), notificationController.addNotification);
+router.get("/get-notifications/:userId", authenticateToken, validateParams(notificationUserParamSchema), notificationController.getNotificationsByUserId);
+router.delete("/delete-notification/:id", authenticateToken, validateParams(notificationIdParamSchema), notificationController.removeNotification);
 
 module.exports = router;

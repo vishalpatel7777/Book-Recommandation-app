@@ -69,8 +69,14 @@ const deleteBook = asyncHandler(async (req, res, next) => {
 
 const getAllBooks = async (req, res, next) => {
     try {
-        const books = await bookService.getAllBooks();
-        return res.status(200).json({ status: "success", data: books });
+        const { page, limit } = req.query;
+        const parsedPage  = page  ? Math.max(1, parseInt(page, 10))  : null;
+        const parsedLimit = limit ? Math.min(50, Math.max(1, parseInt(limit, 10))) : null;
+        const result = await bookService.getAllBooks(parsedPage, parsedLimit);
+        if (parsedPage && parsedLimit && result.pagination) {
+            return res.status(200).json({ status: "success", ...result });
+        }
+        return res.status(200).json({ status: "success", data: result });
     } catch (error) {
         next(error);
     }
@@ -191,6 +197,16 @@ const getReview = async (req, res, next) => {
     }
 };
 
+const getReviewsByBook = async (req, res, next) => {
+    try {
+        const { bookId } = req.params;
+        const reviews = await bookService.getReviewsByBook(bookId);
+        res.json({ data: reviews });
+    } catch (error) {
+        next(error);
+    }
+};
+
 // --- Recommendation ---
 
 const getRecommendedBooks = async (req, res, next) => {
@@ -216,5 +232,6 @@ module.exports = {
     addReview,
     getRating,
     getReview,
+    getReviewsByBook,
     getRecommendedBooks,
 };

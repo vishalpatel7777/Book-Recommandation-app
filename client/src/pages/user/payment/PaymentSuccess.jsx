@@ -1,43 +1,113 @@
-import { useEffect, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle, BookOpen, ArrowRight, Calendar, Hash } from "lucide-react";
+import { CheckCircle, BookOpen, ArrowRight, Calendar, Hash, AlertCircle } from "lucide-react";
 import api from "../../../services/axios";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { book, amount, customer_email, orderId } = state || {};
+  const [searchParams] = useSearchParams();
   const hasRun = useRef(false);
+  const [status, setStatus] = useState("verifying"); // verifying | success | failed
+  const [orderData, setOrderData] = useState(null);
+
+  // Data may come from router state (direct nav) or from Cashfree redirect query params
+  const book = state?.book || null;
+  const amount = state?.amount || null;
+  const cashfreeOrderId = searchParams.get("order_id") || state?.cashfreeOrderId;
+  const bookId = state?.book?._id || searchParams.get("book_id");
 
   const purchaseDate = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
-  const displayOrderId = orderId || `BM-${Date.now().toString(36).toUpperCase()}`;
 
   useEffect(() => {
-    if (!book) { navigate("/login"); return; }
+    if (!cashfreeOrderId && !bookId) {
+      navigate("/");
+      return;
+    }
     if (hasRun.current) return;
     hasRun.current = true;
 
-    const recordPurchase = async () => {
+    const verify = async () => {
       try {
-        await api.post("/add-purchase", { book: book._id, paymentMethod: "Online" });
-        await api.post("/add-notification", {
-          book: book._id,
-          title: book.title || "Untitled",
-          image: book.image || "",
-          author: book.author || "Unknown",
-          price: Number(book.price) || 0,
-          description: "Purchase Successful!",
+        const { data } = await api.post("/verify-payment", {
+          order_id: cashfreeOrderId,
+          bookId,
+          paymentMethod: "Online",
         });
+
+        if (!data.success) {
+          setStatus("failed");
+          return;
+        }
+
+        setOrderData(data);
+
+        // Post notification after successful verification
+        if (book) {
+          try {
+            await api.post("/add-notification", {
+              book: book._id,
+              title: book.title || "Untitled",
+              image: book.image || "",
+              author: book.author || "Unknown",
+              price: Number(book.price) || 0,
+              description: "Purchase Successful!",
+            });
+          } catch { /* non-fatal */ }
+        }
+
+        setStatus("success");
       } catch (err) {
-        console.error("Purchase record error:", err.response?.data || err.message);
+        console.error("Verification error:", err.response?.data || err.message);
+        setStatus("failed");
       }
     };
 
-    recordPurchase();
-  }, [navigate, book]);
+    verify();
+  }, [cashfreeOrderId, bookId, navigate, book]);
 
-  if (!book) return null;
+  const displayOrderId = orderData?.orderId
+    ? orderData.orderId.toString().slice(-8).toUpperCase()
+    : cashfreeOrderId || `BM-${Date.now().toString(36).toUpperCase()}`;
+
+  if (status === "verifying") {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-page)" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 40, height: 40, border: "3px solid var(--border)", borderTopColor: "var(--accent-sage)", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>Verifying your payment…</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "var(--space-8) var(--space-4)", background: "var(--bg-page)" }}>
+        <div style={{ textAlign: "center", maxWidth: "28rem", width: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "var(--space-10)", boxShadow: "var(--shadow-card)" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto var(--space-6)" }}>
+            <AlertCircle size={28} style={{ color: "#ef4444" }} />
+          </div>
+          <h1 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-2xl)", fontWeight: 600, color: "var(--text-primary)", marginBottom: "var(--space-2)" }}>
+            Payment Not Confirmed
+          </h1>
+          <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", marginBottom: "var(--space-7)" }}>
+            We could not verify your payment. If money was deducted, it will be refunded within 5–7 business days.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            <button onClick={() => navigate(-2)} className="btn btn-primary" style={{ width: "100%", padding: "var(--space-3) var(--space-6)" }}>
+              Try Again
+            </button>
+            <button onClick={() => navigate("/")} className="btn btn-secondary" style={{ width: "100%", padding: "var(--space-3) var(--space-6)" }}>
+              Browse Books
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "var(--space-8) var(--space-4)", background: "var(--bg-page)" }}>
@@ -52,7 +122,6 @@ const PaymentSuccess = () => {
           background: "var(--bg-card)", border: "1px solid var(--border)",
           boxShadow: "var(--shadow-card)", textAlign: "center",
         }}>
-          {/* Success icon */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -77,33 +146,35 @@ const PaymentSuccess = () => {
             Your book has been added to your library.
           </p>
 
-          {/* Book pill */}
-          <div style={{
-            display: "flex", gap: "var(--space-3)", alignItems: "center",
-            background: "var(--bg-surface)", borderRadius: "var(--radius-sm)",
-            padding: "var(--space-3) var(--space-4)", marginBottom: "var(--space-6)",
-            textAlign: "left",
-          }}>
-            {book.image && (
-              <div style={{ width: 42, height: 54, flexShrink: 0, borderRadius: "2px", overflow: "hidden" }}>
-                <img src={book.image} alt={book.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              </div>
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "var(--text-sm)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>
-                {book.title}
-              </p>
-              <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>by {book.author}</p>
-            </div>
-            <span style={{
-              fontSize: "var(--text-sm)", fontWeight: 700, color: "var(--text-primary)",
-              fontFamily: "var(--font-heading)", flexShrink: 0,
+          {book && (
+            <div style={{
+              display: "flex", gap: "var(--space-3)", alignItems: "center",
+              background: "var(--bg-surface)", borderRadius: "var(--radius-sm)",
+              padding: "var(--space-3) var(--space-4)", marginBottom: "var(--space-6)",
+              textAlign: "left",
             }}>
-              ₹{Number(amount)}
-            </span>
-          </div>
+              {book.image && (
+                <div style={{ width: 42, height: 54, flexShrink: 0, borderRadius: "2px", overflow: "hidden" }}>
+                  <img src={book.image} alt={book.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "var(--text-sm)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>
+                  {book.title}
+                </p>
+                <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>by {book.author}</p>
+              </div>
+              {amount && (
+                <span style={{
+                  fontSize: "var(--text-sm)", fontWeight: 700, color: "var(--text-primary)",
+                  fontFamily: "var(--font-heading)", flexShrink: 0,
+                }}>
+                  ₹{Number(amount)}
+                </span>
+              )}
+            </div>
+          )}
 
-          {/* Order meta */}
           <div style={{
             display: "flex", flexDirection: "column", gap: "var(--space-2)",
             background: "var(--bg-surface)", borderRadius: "var(--radius-sm)",
@@ -121,7 +192,6 @@ const PaymentSuccess = () => {
             </div>
           </div>
 
-          {/* CTAs */}
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
             <button
               onClick={() => navigate("/profile/wishlist")}

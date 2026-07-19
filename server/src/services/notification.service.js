@@ -13,22 +13,31 @@ const storeNotification = async (notificationData) => {
     return { message: "Notification stored successfully", notification };
 };
 
-const fetchNotificationsByUserId = async (userId) => {
+const fetchNotificationsByUserId = async (userId, page, limit) => {
     if (!userId) {
         throw new Error("userId is required");
     }
-    const notifications = await Notification.find({ userId }).sort({ createdAt: -1 });
-    return notifications;
+    if (page && limit) {
+        const skip  = (page - 1) * limit;
+        const total = await Notification.countDocuments({ userId });
+        const data  = await Notification.find({ userId }).sort({ createdAt: -1 }).skip(skip).limit(limit);
+        return { data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    }
+    return Notification.find({ userId }).sort({ createdAt: -1 });
 };
 
-const deleteNotificationById = async (id) => {
+const deleteNotificationById = async (id, requestingUserId) => {
     if (!id) {
         throw new Error("Notification ID is required");
     }
-    const deletedNotification = await Notification.findByIdAndDelete(id);
-    if (!deletedNotification) {
+    const notification = await Notification.findById(id);
+    if (!notification) {
         throw new Error("Notification not found");
     }
+    if (notification.userId.toString() !== requestingUserId) {
+        throw new Error("Access denied");
+    }
+    await notification.deleteOne();
     return { message: "Notification deleted successfully" };
 };
 

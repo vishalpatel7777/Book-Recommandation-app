@@ -53,8 +53,14 @@ const getDailyStats = asyncHandler(async (req, res) => {
 });
 
 const getUserActivity = asyncHandler(async (req, res) => {
-  const users = await adminService.fetchUserActivity();
-  res.json({ success: true, users: users || [] });
+  const { page, limit } = req.query;
+  const parsedPage  = page  ? Math.max(1, parseInt(page, 10))  : null;
+  const parsedLimit = limit ? Math.min(50, Math.max(1, parseInt(limit, 10))) : null;
+  const result = await adminService.fetchUserActivity(parsedPage, parsedLimit);
+  if (parsedPage && parsedLimit && result.pagination) {
+    return res.json({ success: true, ...result });
+  }
+  res.json({ success: true, users: result || [] });
 });
 
 const getBookAnalytics = asyncHandler(async (req, res) => {

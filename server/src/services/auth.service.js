@@ -1,6 +1,6 @@
 const User = require("../models/user.model");
 const { validatePassword } = require("../validators/auth.validator");
-const { sendMail } = require("../utils/mailer");
+const emailService = require("./email.service");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
@@ -79,32 +79,10 @@ const registerUser = async (userData) => {
 
     await newUser.save();
     
-    // Send verification email
     const verificationLink = `${process.env.BASE_URL || "http://localhost:1000"}/api/v1/verify-email/${verificationToken}`;
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "🎉 Welcome to bookMosaic – Verify Your Email",
-        html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                <h2 style="color: #4A90E2;">Welcome to bookMosaic! 📚</h2>
-                <p>Hi there,</p>
-                <p>Thank you for joining <strong>bookMosaic</strong>! To get started, please verify your email by clicking the button below:</p>
-                <p style="text-align: center;">
-                    <a href="${verificationLink}" style="background-color: #4A90E2; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                        ✅ Verify My Email
-                    </a>
-                </p>
-                <p>If you didn’t sign up for bookMosaic, you can safely ignore this email.</p>
-                <p>Happy Reading! 📖</p>
-                <p>Best Regards,<br><strong>The bookMosaic Team</strong></p>
-                <hr>
-                <p style="font-size: 12px; color: #888;">📩 Need help? Contact us at <a href="mailto:${process.env.EMAIL_USER}">${process.env.EMAIL_USER}</a></p>
-                <p style="font-size: 12px; color: #888;">🌍 Visit us: <a href="https://bookmosaic.netlify.app/">www.bookMosaic.com</a></p>
-            </div>
-        `,
-    };
-    // await sendMail(mailOptions); 
+    try {
+        await emailService.sendWelcomeEmail(email, newUser.fullname, verificationLink);
+    } catch { /* non-fatal — user still created */ }
 
     return { message: "User created successfully. Please check your email for verification." };
 };
@@ -173,28 +151,9 @@ const initiatePasswordReset = async (email) => {
     await user.save();
 
     const resetLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password/${resetToken}`;
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "🔑 Reset Your bookMosaic Password",
-        html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                <h2 style="color: #4A90E2;">Password Reset Request</h2>
-                <p>Hi ${user.fullname || "there"},</p>
-                <p>We received a request to reset your bookMosaic password. Click the button below to reset it:</p>
-                <p style="text-align: center;">
-                    <a href="${resetLink}" style="background-color: #4A90E2; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                        🔄 Reset Password
-                    </a>
-                </p>
-                <p>This link will expire in 1 hour. If you didn’t request a reset, please ignore this email.</p>
-                <p>Best Regards,<br><strong>The bookMosaic Team</strong></p>
-                <hr>
-                <p style="font-size: 12px; color: #888;">📩 Need help? Contact us at <a href="mailto:${process.env.EMAIL_USER}">${process.env.EMAIL_USER}</a></p>
-            </div>
-        `,
-    };
-    // await sendMail(mailOptions); 
+    try {
+        await emailService.sendPasswordResetEmail(email, user.fullname, resetLink);
+    } catch { /* non-fatal — token still valid */ }
     
     return { message: "Password reset link sent to your email" };
 };

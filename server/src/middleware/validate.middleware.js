@@ -13,8 +13,9 @@ const makeValidator = (source, errorMessage) => (schema) => (req, res, next) => 
   next();
 };
 
-const validate = makeValidator("body", "Validation failed");
-const validateParams = makeValidator("params", "Invalid route parameters");
-const validateQuery = makeValidator("query", "Invalid query parameters");
+const validate        = makeValidator("body",    "Validation failed");
+const validateParams  = makeValidator("params",  "Invalid route parameters");
+const validateQuery   = makeValidator("query",   "Invalid query parameters");
+const validateHeaders = makeValidator("headers", "Invalid request headers");
 
-module.exports = { validate, validateParams, validateQuery };
+module.exports = { validate, validateParams, validateQuery, validateHeaders };

@@ -22,6 +22,7 @@ export const SECTIONS = [
   { id: "reviews",           label: "Reviews Manager",       icon: Star,          group: "Catalog" },
   { id: "promotions",        label: "Promotions",            icon: TrendingUp,    group: "Commerce" },
   { id: "coupons",           label: "Coupons",               icon: Percent,       group: "Commerce" },
+  { id: "payment-settings",  label: "Payment Settings",      icon: Settings,      group: "Commerce" },
   { id: "orders",            label: "Orders Manager",        icon: ShoppingBag,   group: "Commerce" },
   { id: "refunds",           label: "Refund Manager",        icon: RefreshCw,     group: "Commerce" },
   { id: "notifications",     label: "Notification Center",   icon: Bell,          group: "System" },

@@ -1,17 +1,21 @@
 require("dotenv").config(); // Load .env BEFORE validating
 const { z } = require("zod");
 
-const envSchema = z.object({
+const requiredSchema = z.object({
   PORT: z.coerce.number().default(1000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   DB_URI: z.string().min(1, "DB_URI is required"),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   FRONTEND_URL: z.string().url("FRONTEND_URL must be a valid URL"),
-  EMAIL_USER: z.string().email("EMAIL_USER must be a valid email"),
-  EMAIL_PASS: z.string().min(1, "EMAIL_PASS is required"),
+  EMAIL_USER: z.string().email("EMAIL_USER must be a valid email").optional(),
+  EMAIL_PASS: z.string().min(1, "EMAIL_PASS is required").optional(),
+  CASHFREE_APP_ID: z.string().optional(),
+  CASHFREE_SECRET_KEY: z.string().optional(),
+  CASHFREE_MODE: z.enum(["sandbox", "production"]).default("sandbox"),
+  BASE_URL: z.string().url().optional(),
 });
 
-const parsed = envSchema.safeParse(process.env);
+const parsed = requiredSchema.safeParse(process.env);
 
 if (!parsed.success) {
   console.error("❌ Invalid environment variables. Server refused to start.\n");
@@ -20,6 +24,14 @@ if (!parsed.success) {
     console.error(`  [${issue.path.join(".") || "root"}]: ${issue.message}`);
   });
   process.exit(1);
+}
+
+// Warn about missing optional-but-critical vars at startup
+if (!parsed.data.EMAIL_USER || !parsed.data.EMAIL_PASS) {
+  console.warn("[WARN] EMAIL_USER / EMAIL_PASS not set — transactional emails will fail silently");
+}
+if (!parsed.data.CASHFREE_APP_ID || !parsed.data.CASHFREE_SECRET_KEY) {
+  console.warn("[WARN] CASHFREE_APP_ID / CASHFREE_SECRET_KEY not set — payment creation will fail");
 }
 
 module.exports = parsed.data;

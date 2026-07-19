@@ -1,0 +1,447 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  user
+  admin
+}
+
+enum BookStatus {
+  draft
+  published
+  archived
+}
+
+enum OrderStatus {
+  pending
+  completed
+  failed
+  refund_pending
+  refunded
+  partial_refund
+}
+
+enum OrderPaymentMethod {
+  cashfree
+  direct
+}
+
+enum PaymentRecordType {
+  payment
+  refund
+}
+
+enum PaymentStatus {
+  pending
+  success
+  failed
+}
+
+enum GrantType {
+  purchase
+  admin_grant
+  refund_reversal
+}
+
+enum NotifType {
+  purchase
+  refund
+}
+
+enum AdminNotifType {
+  new_order
+  failed_payment
+  refund_requested
+  refund_processed
+  new_user
+  new_review
+  failed_login
+  profile_update
+}
+
+enum ReviewStatus {
+  pending
+  published
+  flagged
+  removed
+}
+
+enum ReadingStatusEnum {
+  want_to_read
+  reading
+  completed
+  dropped
+}
+
+enum CouponType {
+  flat
+  percent
+}
+
+enum CouponStatus {
+  active
+  expired
+  disabled
+}
+
+enum ContentStatus {
+  active
+  archived
+}
+
+enum PromotionStatus {
+  active
+  scheduled
+  ended
+}
+
+// ─── Composite Types ──────────────────────────────────────────────────────────
+
+type LibraryEntry {
+  bookId    String   @db.ObjectId
+  grantedAt DateTime
+  grantType GrantType
+  orderId   String?  @db.ObjectId
+}
+
+type HomepageBlockItem {
+  blockId       String
+  type          String
+  status        String
+  order         Int
+  headline      String?
+  subtext       String?
+  bookId        String? @db.ObjectId
+  authorId      String? @db.ObjectId
+  imageUrl      String?
+  imagePublicId String?
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id                   String    @id @default(auto()) @map("_id") @db.ObjectId
+  fullname             String
+  email                String    @unique
+  username             String    @unique
+  password             String
+  phone                String?
+  age                  Int?
+  genre                String?
+  image                String?
+  imagePublicId        String?
+  role                 UserRole  @default(user)
+  lastLogin            DateTime?
+  passwordResetToken   String?
+  passwordResetExpiry  DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Book {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  author       String
+  price        Float
+  mrp          Float?
+  discount     Float?
+  image        String?
+  pdfKey       String?
+  genre        String?
+  subject      String?
+  language     String?    @default("English")
+  isbn         String?
+  url          String?
+  slug         String?
+  desc         String?
+  ratings      Float?     @default(0)
+  category     String?
+  status       BookStatus @default(draft)
+  publishedAt  DateTime?
+  seoTitle     String?
+  seoDesc      String?
+  seoKeywords  String?
+  tags         String[]
+  purchases    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("books")
+}
+
+model Cart {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @unique @db.ObjectId
+  books     String[] @db.ObjectId
+  updatedAt DateTime @updatedAt
+
+  @@map("carts")
+}
+
+model Wishlist {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @unique @db.ObjectId
+  books     String[] @db.ObjectId
+  updatedAt DateTime @updatedAt
+
+  @@map("wishlists")
+}
+
+model Library {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String         @unique @db.ObjectId
+  entries   LibraryEntry[]
+  updatedAt DateTime       @updatedAt
+
+  @@map("library")
+}
+
+model Order {
+  id               String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String             @db.ObjectId
+  bookId           String?            @db.ObjectId
+  items            String[]           @db.ObjectId
+  amount           Float
+  currency         String             @default("INR")
+  paymentType      OrderPaymentMethod
+  couponId         String?            @db.ObjectId
+  couponCode       String?
+  discount         Float?
+  cashfreeOrderId  String?
+  paymentSessionId String?
+  paymentId        String?            @db.ObjectId
+  status           OrderStatus        @default(pending)
+  createdAt        DateTime           @default(now())
+  completedAt      DateTime?
+
+  @@map("orders")
+}
+
+model Payment {
+  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
+  orderId            String            @db.ObjectId
+  userId             String            @db.ObjectId
+  cashfreeOrderId    String            @unique
+  cashfreePaymentId  String?
+  amount             Float
+  currency           String
+  status             PaymentStatus     @default(pending)
+  paymentMethod      String?
+  gatewayResponse    Json?
+  type               PaymentRecordType
+  refundId           String?
+  createdAt          DateTime          @default(now())
+  settledAt          DateTime?
+
+  @@map("payments")
+}
+
+model Review {
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  bookId    String       @db.ObjectId
+  userId    String       @db.ObjectId
+  username  String
+  rating    Int
+  comment   String?
+  status    ReviewStatus @default(pending)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([userId, bookId])
+  @@map("reviews")
+}
+
+model ReadingStatus {
+  id        String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String            @db.ObjectId
+  bookId    String            @db.ObjectId
+  status    ReadingStatusEnum
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@unique([userId, bookId])
+  @@map("readingstatuses")
+}
+
+model ReadingGoal {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  year        Int
+  targetBooks Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, year])
+  @@map("readinggoals")
+}
+
+model Notification {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  bookId      String    @db.ObjectId
+  type        NotifType
+  title       String
+  image       String?
+  author      String?
+  price       Float?
+  description String?
+  read        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  @@map("notifications")
+}
+
+model Coupon {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  code        String
+  type        CouponType
+  value       Float
+  maxDiscount Float?
+  maxUses     Int?
+  uses        Int          @default(0)
+  status      CouponStatus @default(active)
+  expiresAt   DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@map("coupons")
+}
+
+model Author {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  genre         String?
+  bio           String?
+  image         String?
+  imagePublicId String?
+  booksCount    Int           @default(0)
+  status        ContentStatus @default(active)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("authors")
+}
+
+model Category {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String        @unique
+  icon        String?
+  color       String?
+  count       Int           @default(0)
+  description String?
+  status      ContentStatus @default(active)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("categories")
+}
+
+model Promotion {
+  id           String          @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  description  String?
+  badge        String?
+  cta          String?
+  ctaLink      String?
+  imageUrl     String?
+  status       PromotionStatus @default(active)
+  scheduledAt  DateTime?
+  endsAt       DateTime?
+  targetBookId String?         @db.ObjectId
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("promotions")
+}
+
+model HomepageBlock {
+  id     String              @id @default(auto()) @map("_id") @db.ObjectId
+  page   String              @unique
+  blocks HomepageBlockItem[]
+
+  @@map("homepageblocks")
+}
+
+model SiteSetting {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  group     String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("sitesettings")
+}
+
+model AuditLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  actor     String?  @db.ObjectId
+  source    String   @default("system")
+  action    String
+  target    String?
+  meta      Json?
+  severity  String   @default("info")
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@map("auditlogs")
+}
+
+model AdminNotification {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  type      AdminNotifType
+  message   String
+  meta      Json?
+  read      Boolean        @default(false)
+  severity  String         @default("info")
+  createdAt DateTime       @default(now())
+
+  @@map("adminnotifications")
+}
+
+model SupportTicket {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String    @db.ObjectId
+  subject    String
+  message    String
+  status     String    @default("open")
+  adminReply String?
+  repliedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("supporttickets")
+}
+
+model SearchQuery {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  query       String
+  userId      String?  @db.ObjectId
+  resultCount Int?
+  createdAt   DateTime @default(now())
+
+  @@map("searchqueries")
+}
+
+model MediaAsset {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  publicId   String   @unique
+  url        String?
+  type       String
+  mimeType   String?
+  sizeBytes  Int?
+  bookId     String?  @db.ObjectId
+  uploadedBy String?  @db.ObjectId
+  uploadedAt DateTime @default(now())
+  folder     String?
+
+  @@map("mediaassets")
+}

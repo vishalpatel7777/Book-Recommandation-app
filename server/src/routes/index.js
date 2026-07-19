@@ -14,6 +14,7 @@ const paymentRoutes = require("./payment.routes");
 const orderRoutes = require("./order.routes");
 const userRoutes = require("./user.routes");
 const readingStatusRoutes = require("./readingStatus.routes");
+const commerceRoutes = require("./commerce.routes");
 
 // --- Mount all routes ---
 router.use("/", authRoutes);
@@ -27,6 +28,7 @@ router.use("/", paymentRoutes);
 router.use("/", orderRoutes);
 router.use("/", userRoutes);
 router.use("/", readingStatusRoutes);
+router.use("/", commerceRoutes);
 
 function registerRoutes(app) {
   app.use(API_PREFIX, router); // Change API_PREFIX in paths.js → affects entire API

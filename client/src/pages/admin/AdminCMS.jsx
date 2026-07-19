@@ -28,6 +28,7 @@ import NotificationSettingsSection from "./cms/sections/NotificationSettingsSect
 import ReviewsSection        from "./cms/sections/ReviewsSection";
 import OrdersSection         from "./cms/sections/OrdersSection";
 import RefundsSection        from "./cms/sections/RefundsSection";
+import PaymentSettingsSection from "./cms/sections/PaymentSettingsSection";
 import SupportSection        from "./cms/sections/SupportSection";
 import SearchAnalyticsSection from "./cms/sections/SearchAnalyticsSection";
 import RecommendationsSection from "./cms/sections/RecommendationsSection";
@@ -437,6 +438,7 @@ const RENDERERS = {
   reviews:                 ReviewsSection,
   promotions:              PromotionsSection,
   coupons:                 CouponsSection,
+  "payment-settings":      PaymentSettingsSection,
   orders:                  OrdersSection,
   refunds:                 RefundsSection,
   notifications:           NotificationCenterSection,

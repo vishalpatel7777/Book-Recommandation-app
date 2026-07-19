@@ -32,8 +32,9 @@ const purchaseSchema = new mongoose.Schema(
       // enum: ["Online", "COD"], // Optional
     },
   },
-  { timestamps: true } // Automatically adds createdAt and updatedAt
+  { timestamps: true }
 );
 
-// Use singular, capitalized model name for export
+purchaseSchema.index({ user: 1, book: 1 }, { unique: true });
+
 module.exports = mongoose.model("Purchase", purchaseSchema);
