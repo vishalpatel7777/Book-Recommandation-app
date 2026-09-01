@@ -24,21 +24,28 @@ async function run(){
       console.log('created', u.email);
     }
   }
-  await make({ username:'testauthor', email:'author@test.com', password:'Author@123', fullname:'Test Author', phone:'9876543210', age:30, genre:'Fiction', role:'author' });
-  await make({ username:'testuser', email:'user@test.com', password:'User@1234', fullname:'Test User', phone:'9876543211', age:25, genre:'Fiction', role:'user' });
-  let admin = await User.findOne({ email:'kuzemasachika636@gmail.com' });
+  const demoAuthorEmail = process.env.DEMO_AUTHOR_EMAIL || 'author@example.com';
+  const demoAuthorPass = process.env.DEMO_AUTHOR_PASSWORD || process.env.DEMO_PASSWORD || 'ChangeMe123!';
+  const demoUserEmail = process.env.DEMO_USER_EMAIL || 'user@example.com';
+  const demoUserPass = process.env.DEMO_USER_PASSWORD || process.env.DEMO_PASSWORD || 'ChangeMe123!';
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+  const adminPass = process.env.ADMIN_PASSWORD || process.env.DEMO_ADMIN_PASSWORD || 'ChangeMe123!';
+  if (!adminEmail) throw new Error('ADMIN_EMAIL or EMAIL_USER must be set in .env for seeding demo admin');
+  await make({ username:'testauthor', email: demoAuthorEmail, password: demoAuthorPass, fullname:'Test Author', phone:'9876543210', age:30, genre:'Fiction', role:'author' });
+  await make({ username:'testuser', email: demoUserEmail, password: demoUserPass, fullname:'Test User', phone:'9876543211', age:25, genre:'Fiction', role:'user' });
+  let admin = await User.findOne({ email: adminEmail });
   if(admin){
-    admin.password='Admin@123';
+    admin.password=adminPass;
     admin.isVerified=true;
     admin.verificationToken=null;
     await admin.save();
-    console.log('admin reset Admin@123');
+    console.log('admin reset (password from env)');
   } else {
-    const ad=new User({ username:'Admin', email:'kuzemasachika636@gmail.com', password:'Admin@123', fullname:'Admin User', phone:'9876543212', age:30, genre:'Fiction', role:'admin', isVerified:true, verificationToken:null });
+    const ad=new User({ username:'Admin', email: adminEmail, password: adminPass, fullname:'Admin User', phone:'9876543212', age:30, genre:'Fiction', role:'admin', isVerified:true, verificationToken:null });
     await ad.save();
-    console.log('admin created Admin@123');
+    console.log('admin created (password from env)');
   }
-  const us=await User.find({ email: { $in:['author@test.com','user@test.com','kuzemasachika636@gmail.com'] } }).select('username email role isVerified').lean();
+  const us=await User.find({ email: { $in:[demoAuthorEmail, demoUserEmail, adminEmail] } }).select('username email role isVerified').lean();
   console.log(JSON.stringify(us,null,2));
   await mongoose.disconnect();
 }

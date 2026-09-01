@@ -9,9 +9,9 @@ const connectToDb = async () => {
       throw new Error("MongoDB URI (DB_URI) is not provided in environment variables");
     }
     await mongoose.connect(uri);
-    console.log("✅ MongoDB connected successfully."); // Added success emoji
+    require("../src/config/logger").info("MongoDB connected");
   } catch (error) {
-    console.error("❌ MongoDB connection error:", error.message);
+    require("../src/config/logger").error("MongoDB connection error", { error: error.message });
     // Exit the process with failure code if connection fails
     process.exit(1);
   }

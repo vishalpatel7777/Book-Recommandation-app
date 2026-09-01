@@ -19,7 +19,7 @@ const MotivationalQuote = () => {
       setError(null);
     } catch (err) {
       setError("⚠️ Could not load quote. Please try again.");
-      console.error("Fetch error:", err);
+      if (import.meta.env.DEV) console.warn("Quote fetch failed", err);
     }
   };
 

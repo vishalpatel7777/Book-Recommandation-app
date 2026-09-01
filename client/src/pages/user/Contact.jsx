@@ -20,17 +20,27 @@ function Contactus() {
     const formData = new FormData(form.current);
     const userEmail = formData.get("email");
 
+    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+    const autoReplyTemplate = import.meta.env.VITE_EMAILJS_AUTOREPLY_TEMPLATE;
+    if (!serviceId || !templateId || !publicKey) {
+      setError("Contact service not configured.");
+      return;
+    }
     emailjs
-      .sendForm("service_vplid4c", "template_wrbcsbe", form.current, "NpEuWp-f4uZXVdpn7")
+      .sendForm(serviceId, templateId, form.current, publicKey)
       .then(
         () => {
           setIsSent(true);
           setError("");
-          emailjs.send("service_vplid4c", "template_3xuakot", {
-            to_email: userEmail,
-            user_name: formData.get("name"),
-            message: formData.get("message"),
-          }, "NpEuWp-f4uZXVdpn7");
+          if (autoReplyTemplate) {
+            emailjs.send(serviceId, autoReplyTemplate, {
+              to_email: userEmail,
+              user_name: formData.get("name"),
+              message: formData.get("message"),
+            }, publicKey);
+          }
           form.current.reset();
         },
         () => {
@@ -54,9 +64,9 @@ function Contactus() {
           {/* Info */}
           <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }} className="space-y-4">
             {[
-              { icon: <MapPin size={14} />, label: "Address", value: "Bakrol Gate, Acet Boys Hostel, 388120" },
-              { icon: <Mail size={14} />, label: "Email", value: "patelvishal4642@gmail.com" },
-              { icon: <Phone size={14} />, label: "Phone", value: "+91 9265001227" },
+              { icon: <MapPin size={14} />, label: "Address", value: import.meta.env.VITE_CONTACT_ADDRESS || "BookMosaic HQ, Your City" },
+              { icon: <Mail size={14} />, label: "Email", value: import.meta.env.VITE_CONTACT_EMAIL || "support@bookmosaic.example" },
+              { icon: <Phone size={14} />, label: "Phone", value: import.meta.env.VITE_CONTACT_PHONE || "+91 00000 00000" },
             ].map((item) => (
               <div key={item.label} className="flex items-start gap-3 p-4 rounded-sm" style={{ background: "#FFFFFF", border: "1px solid #E8E2D6" }}>
                 <div className="w-7 h-7 rounded-sm flex items-center justify-center shrink-0 mt-0.5" style={{ background: "rgba(92,122,94,0.1)", color: "#5C7A5E" }}>

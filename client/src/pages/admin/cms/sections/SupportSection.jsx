@@ -48,7 +48,7 @@ export default function SupportSection() {
       }
     } catch (e) {
       // On real error, show empty + toast — do NOT fallback to dummy data which hides API failures
-      console.error("Support fetch failed", e?.response?.data || e.message);
+      if (import.meta.env.DEV) console.warn("Support fetch failed", e?.response?.data || e.message);
       setTickets([]);
       toast?.(e?.response?.data?.message || "Failed to load tickets (API error)", "error");
     } finally { setLoading(false); }

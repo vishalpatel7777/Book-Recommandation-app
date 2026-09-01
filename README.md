@@ -1,163 +1,124 @@
-# 📚 BookMosaic – Personalized Book Recommendation & Purchase Platform
+# 📚 BookMosaic — Personalized Book Recommendation & Purchase Platform
 
-**BookMosaic** is a user-centric, full-stack web platform that blends genre-based book discovery with secure digital purchases. The name *BookMosaic* reflects the mix of genres, recommendations, and features tailored to every type of reader — casual, academic, or retail.
+**BookMosaic** is a full-stack MERN platform for genre-based discovery, personalized recommendations, and secure digital purchases. The name reflects the mosaic of genres, authors, and features tailored to every reader.
 
-🌐 **Live Demo:** [https://mybookmosaic.netlify.app](https://mybookmosaic.netlify.app)  
-🔧 **Status:** Actively maintained | 🚀 MVP Completed
-
----
-
-## 🧠 What Makes BookMosaic Special?
-
-> "Even with limitations, it works — and that’s what makes it worth using."
-
-- User-friendly UI for both Admin and Users.
-- Modular & expandable architecture.
-- Secure test-mode payments via Cashfree.
-- Integrated notification and review system.
-- Backend logic with rich analytics and CRUD capability.
+> **Live Demo:** `https://mybookmosaic.netlify.app` (frontend) + `https://book-mosaic.onrender.com` (API)  
+> **Status:** MVP complete · actively maintained · commit-ready (no hardcoded secrets)
 
 ---
 
-## 🧑‍💼 Admin Side Features
+## Architecture
 
-Accessible only to admins with a dedicated admin login and dashboard.
+```
+Book-Recommandation-app/
+├── client/   — React 18 + Vite 6 + Redux Toolkit + Tailwind 4 + Framer Motion
+│   ├── src/pages/admin/cms/*  (25 CMS sections, API-authoritative)
+│   ├── src/components/books/Home  (live homepage blocks via /homepage-blocks)
+│   ├── src/store/cmsStore.js      (deprecated mock exports, now live hooks)
+│   └── src/hooks/useCmsLive.js    (live CMS: blocks, authors, categories, promos, blog/faq)
+├── server/   — Express 4 + Mongoose 8 + Zod validation + JWT httpOnly cookies
+│   ├── src/routes/cms.routes.js   (public + admin CMS, 30+ endpoints)
+│   ├── src/services/cms.service.js (authors/categories/promos/coupons/reviews/support/…)
+│   ├── src/models/*               (User, Book, Review, Order, Purchase, etc.)
+│   └── src/config/env.js         (Zod validates process.env on boot)
+└── docs/     — product-audit, deployment guide
+```
 
-### ✨ Admin Dashboard Includes:
-
-- **Home Page** (Admin Only)
-- **Dashboard Stats:**
-  - Total Users
-  - Active Users (last 24 hours)
-  - Total Reviews
-  - Book Purchases *(currently under fix)*
-- **User Activities:**
-  - Last login with date and time
-- **Book Analytics:**
-  - Top-rated books
-  - Most purchased books
-  - Recently added books
-- **Monthly Analytics:**
-  - Monthly revenue chart
-  - New user joins per month
-  - Top genres read
-
-### ⚙️ Admin Controls
-
-- **Manage Users:**
-  - View all users
-  - Delete users
-- **Manage Books:**
-  - View all books
-  - Add, Edit, Delete books
-- **Admin Settings:**
-  - Change admin details
-- **Admin Profile Section**
-- **Logout Button**
+**Data flow:** `Home` fetches `GET /homepage-blocks` (active only) → `renderCMSSection`. `Cart` validates coupons via `POST /coupons/validate` (server authoritative, not `CMS_COUPONS` mock). Admin CMS sections fetch `GET /cms/*` with `[]` authoritative empty (no dummy fallback).
 
 ---
 
-## 🧑‍🎓 User Side Features
+## Tech Stack
 
-### 📂 Pages and Components
-
-- **Home Page** *(Different from Admin)*  
-  → "Order Now" button redirects to Categories  
-- **Categories Page**
-  - Genre filter
-  - Recommended Books (based on average ratings)
-  - Recently Added Books (with “See All” feature)
-- **About Page**  
-  → Includes **Contact Us** button → sends email directly to Admin  
-- **Search Box**  
-  → Manual search for books by title
-- **Wishlist Page**
-  - Add/view favorite books
-- **Cart Page**
-  - Add/view books to purchase
-- **Book Info Page**
-  - Add to Wishlist, Cart, or proceed to Buy
-- **Payment Flow:**
-  - Cashfree (Test Mode)
-  - Final Info Page → Payment → Success → Download PDF
-- **Notification Page**
-  - All book purchase logs
-  - Rate and review each book post-purchase
-
-### 👤 User Profile
-
-A nested layout built using `React Outlet` with 3-pane UI.
-
-- **Sections:**
-  - Wishlist
-  - Terms & Conditions
-  - Privacy Policy
-  - Blog
-  - Best Authors
-  - FAQs
-- **User Settings:**
-  - Change profile details
-- **Logout Button**
+| Layer | Tech |
+|-------|------|
+| Frontend | React 18.3.1, Redux Toolkit 2.6.1, React Router 7.3, Axios 1.8.3, Tailwind 4, Framer Motion 12.5, Recharts 2.15 |
+| Backend | Node 20+, Express 4.21, Mongoose 8, Zod 4, JWT 9, Bcryptjs 2, Cashfree PG 5, Nodemailer 7, Multer 1.4 |
+| Security | Helmet, express-mongo-sanitize, xss-clean, hpp, express-rate-limit (per-route), httpOnly cookies, Zod env/route validation |
+| DB | MongoDB Atlas (`DB_URI` in `.env`) — indexes via `npm run db:indexes` |
+| Deploy | Netlify (client), Render (server) — see `docs/deployment.md` |
 
 ---
 
-## 🛠️ Tech Stack
+## Features
 
-| Category      | Technologies (with versions)                          |
-|---------------|-------------------------------------------------------|
-| Frontend      | React.js (18.3.1), Redux Toolkit (2.6.1), Axios (1.8.3) |
-| Styling       | Tailwind CSS (4.0.14), Framer Motion (^12.5.0), Styled-components (6.1.15) |
-| Routing       | React Router DOM (7.3.0)                             |
-| Backend       | Node.js (v20+), Express.js (4.21.2), Body-parser (1.20.3) |
-| Database      | MongoDB (6.14.2), Mongoose (8.12.1)                 |
-| Auth          | JWT (9.0.2), Bcrypt (5.1.1) / BcryptJS (3.0.2)     |
-| Payment       | Cashfree  |
-| Email         | Nodemailer (6.10.0), Google APIs (148.0.0), EmailJS (4.4.1) |
-| Visualization | Recharts (2.15.1)                                    |
-| Deployment    | Netlify (Frontend), Render (Backend)                 |
-| Dev Tools     | Vite (6.0.5), ESLint (9.17.0), Nodemon (3.1.9)     |
+**User:** Home (hero carousel + CMS blocks), Discover by genre (`Filter.jsx` 20 genres + collections), Search, Wishlist (`PUT /add-to-wishlist`), Cart (`PUT /add-to-cart`, `POST /add-purchase` multi-book `recordCartPurchase`), Checkout (`POST /create-payment` Cashfree), Notifications (`GET /get-notifications`), Reading status, Profile (Dashboard, Reading Activity, Notifications, Edit, About, Blog, FAQ, Best Authors).
+
+**Author:** `POST /author/register`, `POST /author/login`, dashboard.
+
+**Admin (`/admin`):** `GET /book-analytics`, `GET /daily`, `GET /user-activity`, `GET /monthly-analytics`, manage books/users, **Control Center `/admin/cms`** 25 sections: Branding, Theme (`PUT /cms/theme`), SEO, Homepage Builder, Media Library, User/Book/Event/Search/Recommendation analytics, Authors, Categories, Reviews (`GET /cms/reviews` populated `book/user`), Promotions, Coupons (`POST /coupons/validate`), Orders/Refunds, Notifications, Scheduler, Support (`GET /cms/support/tickets` authoritative), Audit Logs, Features, Integrations.
 
 ---
 
-## 🧪 Testing
+## Quick Start
 
-- ✅ Manual live testing on deployed URL
-- ✅ Postman API tests for all endpoints
-- ✅ Lighthouse Performance:
-  (optimization pending)
+**Prereqs:** Node 20+, MongoDB Atlas URI, Gmail app password (for `EMAIL_*`), Cashfree sandbox keys.
+
+```bash
+# 1. Clone
+git clone https://github.com/vishalpatel7777/Book-Recommandation-app.git
+cd Book-Recommandation-app
+
+# 2. Server env
+cp server/.env.example server/.env
+# edit server/.env: DB_URI, JWT_SECRET (≥32 chars), FRONTEND_URL, EMAIL_*, CASHFREE_*, GOOGLE_CREDENTIALS
+
+# 3. Client env (optional)
+# client/.env
+# VITE_CONTACT_EMAIL=support@bookmosaic.example
+# VITE_CONTACT_ADDRESS=Your HQ
+# VITE_CONTACT_PHONE=+91 00000 00000
+# VITE_EMAILJS_SERVICE_ID=...
+# VITE_SUPPORT_EMAIL=support@bookmosaic.example
+
+# 4. Install & seed
+npm --prefix server install
+npm --prefix client install
+npm --prefix server run db:indexes
+node server/scripts/seed-live-data.js      # 3 authors, 20 categories, 3 promos/coupons, 5 notification templates, normalize book genres
+node server/scripts/ensure-demo-users.js   # requires ADMIN_EMAIL/DEMO_* in .env (see server/.env.example)
+
+# 5. Dev
+npm --prefix server run dev   # http://localhost:1000/api/v1
+npm --prefix client run dev   # http://localhost:5173
+
+# 6. Build / Test
+npm --prefix client run build
+npm --prefix server test
+```
+
+**Demo logins after `ensure-demo-users.js` (set via env, not hardcoded):**
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD` (or `EMAIL_USER` fallback) — admin
+- `DEMO_AUTHOR_EMAIL` / `DEMO_AUTHOR_PASSWORD` — author
+- `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` — user
+
+See `server/.env.example` for all env vars. Never commit `server/.env`.
 
 ---
 
-## 🚧 Known Limitations
+## Security
 
-- Profile page performance above 2s
-- Mobile responsiveness not yet implemented
-- No Jest unit tests (planned for next update)
-
----
-
-
-## 🧑‍💻 Author
-
-Made with 💙 by **Vishal patel**
-
-📧 Contact: [patelvishal14642@gmail.com](mailto:patelvishal14642@gmail.com)
-
+- `server/src/app.cjs:28` `helmet()` + `mongoSanitize` + `xss-clean` + `hpp` + `cookieParser` httpOnly.
+- `server/src/config/env.js` Zod validates `DB_URI`, `JWT_SECRET≥32`, `FRONTEND_URL` on boot, exits 1 if invalid.
+- `server/src/middleware/rateLimiter.js` `apiLimiter 1000/15min` (skip admin via JWT `role==='admin'`), `authLimiter 10/15min` on `auth.routes.js`.
+- `server/src/config/logger.js` structured JSON `{timestamp,level,message,meta}` with `LOG_LEVEL`/`LOG_FILE` support, no `console.log` in services (payment/audit/mailer use `logger`).
+- `server/src/middleware/validate.middleware.js` Zod on all `POST/PUT` plus `validateParams` for ObjectIds.
 
 ---
 
-## 📚 References
+## Project Structure
 
-- [React.js](https://reactjs.org)
-- [Redux](https://redux.js.org)
-- [Tailwind CSS](https://tailwindcss.com)
-- [Express.js](https://expressjs.com)
-- [MongoDB](https://www.mongodb.com/docs)
-- [Cashfree Docs](https://docs.cashfree.com)
+See `server/README.md` and `client/README.md` for deep dives. Key paths: `server/src/routes/cms.routes.js`, `server/src/services/cms.service.js`, `client/src/pages/admin/AdminCMS.jsx`, `client/src/hooks/useCmsLive.js`, `docs/deployment.md`.
 
 ---
 
-## 💬 Feedback or Suggestions?
+## Deployment
 
-Feel free to open an [Issue](https://github.com/vishalpatel7777/Book-Recommandation-app/issues) or [Contact Me](mailto:patelvishal14642@gmail.com). I'm always open to ideas that make BookMosaic better!
+See `docs/deployment.md` for Render (server) + Netlify (client) steps, env matrix, health checks (`GET /api/v1/admin/health`), and rollback.
+
+---
+
+## Feedback
+
+Open an Issue on GitHub. Configure `VITE_SUPPORT_EMAIL` for contact.
 

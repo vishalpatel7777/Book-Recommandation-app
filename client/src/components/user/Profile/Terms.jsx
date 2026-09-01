@@ -28,7 +28,7 @@ const SECTIONS = [
   },
   {
     title: "7. Contact Information",
-    body: "For questions about these Terms and Conditions, contact us at support@bookmosaic.com. We aim to respond within 2 business days.",
+    body: `For questions about these Terms and Conditions, contact us at ${import.meta.env.VITE_SUPPORT_EMAIL || "support@bookmosaic.example"}. We aim to respond within 2 business days.`,
   },
 ];
 

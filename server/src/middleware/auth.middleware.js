@@ -9,7 +9,8 @@ const authenticateToken = (req, res, next) => {
 
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    console.error("FATAL: JWT_SECRET environment variable is not set.");
+    const logger = require("../config/logger");
+    logger.error("FATAL: JWT_SECRET not set — refusing auth");
     return res.status(500).json({ message: "Server configuration error." });
   }
 

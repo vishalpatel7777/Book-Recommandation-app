@@ -24,7 +24,7 @@ const SECTIONS = [
   },
   {
     title: "6. Your Rights",
-    body: "You have the right to access, modify, or request deletion of your personal data. To exercise these rights, contact us at support@bookmosaic.com. We will respond within 7 business days.",
+    body: `You have the right to access, modify, or request deletion of your personal data. To exercise these rights, contact us at ${import.meta.env.VITE_SUPPORT_EMAIL || "support@bookmosaic.example"}. We will respond within 7 business days.`,
   },
   {
     title: "7. Data Retention",

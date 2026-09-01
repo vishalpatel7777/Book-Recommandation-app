@@ -59,7 +59,7 @@ const PaymentSuccess = () => {
 
         setStatus("success");
       } catch (err) {
-        console.error("Verification error:", err.response?.data || err.message);
+        if (import.meta.env.DEV) console.warn("Payment verification failed", err.response?.data || err.message);
         setStatus("failed");
       }
     };

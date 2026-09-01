@@ -363,7 +363,7 @@ function AboutPage() {
           { label: "Active readers",     value: "50,000+" },
           { label: "Average rating",     value: "4.8 / 5" },
           { label: "Version",            value: "2.0 — Stable" },
-          { label: "Support",            value: "support@bookmosaic.com" },
+          { label: "Support",            value: import.meta.env.VITE_SUPPORT_EMAIL || "support@bookmosaic.example" },
         ].map(({ label, value }) => (
           <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-3) var(--space-4)", background: "var(--bg-surface)", border: "1px solid var(--border-light)", borderRadius: "var(--radius-sm)" }}>
             <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "var(--tracking-wider)", fontWeight: 600 }}>{label}</span>
