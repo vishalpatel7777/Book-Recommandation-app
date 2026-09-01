@@ -37,11 +37,18 @@ const errorMiddleware = (err, req, res, next) => {
     message = "Token expired, please log in again.";
   }
 
-  console.error(`❌ [${req.method}] ${req.originalUrl} → ${statusCode}: ${message}`);
-  if (statusCode === 500) console.error(err.stack);
+  const logger = require("../utils/logger");
+  logger.error(`${req.method} ${req.originalUrl} → ${statusCode}: ${message}`, {
+    statusCode,
+    message,
+    stack: statusCode === 500 ? err.stack : undefined,
+    requestId: req.requestId,
+    url: req.originalUrl,
+  });
 
   res.status(statusCode).json({
     message,
+    requestId: req.requestId,
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };

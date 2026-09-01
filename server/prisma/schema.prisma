@@ -12,6 +12,7 @@ datasource db {
 enum UserRole {
   user
   admin
+  author
 }
 
 enum BookStatus {

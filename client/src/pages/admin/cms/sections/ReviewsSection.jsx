@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Star, Eye, CheckCircle, XCircle, Trash2 } from "lucide-react";
-import { MOCK_REVIEWS } from "../cmsData";
 import { st, SectionTitle, KpiRow, StatusBadge, ConfirmDialog, Drawer, SearchBar, EmptyState, ActionBtn, Checkbox, Pagination, useToastEmitter } from "../cmsUi";
 import api from "../../../../services/axios";
 
@@ -14,8 +13,31 @@ function Stars({ n }) {
 
 export default function ReviewsSection() {
   const toast = useToastEmitter();
-  const [reviews, setReviews] = useState(MOCK_REVIEWS);
-  useEffect(()=>{ api.get("/cms/reviews").then(({data})=>{ const list=data?.data??data; if(Array.isArray(list)&&list.length){ setReviews(list.map(r=>({ id:r._id||r.id, book:r.bookId||r.book||"—", user:r.userId||r.user||"user", rating:r.rating||0, text:r.review||r.comment||r.text||"", date:r.createdAt?new Date(r.createdAt).toLocaleDateString():r.date, status:r.status||"pending", raw:r }))); } }).catch(()=>{}); },[]);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(()=>{
+    api.get("/cms/reviews")
+      .then(({data})=>{
+        // cms.service returns { success:true, data:[...], total... } OR {success, data:{blocks}} patterns
+        // For reviews: { success:true, data:[normalized], ... } where data.data is array OR data.data.data edge case
+        const raw = data?.data ?? data;
+        const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+        if(Array.isArray(list)){
+          // Service already normalizes to {book: title string, user: username string, text, rating, date, status, id}
+          // But handle both normalized and raw populated shapes defensively
+          const mapped = list.map(r=>{
+            const bookStr = (typeof r.book === 'string' && r.book) ? r.book
+              : (r.bookId && typeof r.bookId === 'object' ? (r.bookId.title || "") : (typeof r.bookId === 'string' ? r.bookId : "")) || (typeof r.book === 'object' ? (r.book.title || "") : "") || "—";
+            const userStr = (typeof r.user === 'string' && r.user) ? r.user
+              : (r.userId && typeof r.userId === 'object' ? (r.userId.username || r.userId.email || "") : (typeof r.userId === 'string' ? r.userId : "")) || (typeof r.user === 'object' ? (r.user.username || "") : "") || "—";
+            return { id: r._id||r.id, book: String(bookStr), user: String(userStr), rating: r.rating||0, text: r.review||r.comment||r.text||"", date: r.createdAt?new Date(r.createdAt).toLocaleDateString(): (r.date||""), status: r.status||"pending", raw: r };
+          });
+          setReviews(mapped);
+        }
+      })
+      .catch(()=>{ /* keep empty; ErrorBoundary will show EmptyState not crash */ })
+      .finally(()=> setLoading(false));
+  },[]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState([]);
@@ -25,7 +47,11 @@ export default function ReviewsSection() {
   const PER_PAGE = 10;
 
   const filtered = reviews.filter(r => {
-    const matchSearch = r.book.toLowerCase().includes(search.toLowerCase()) || r.user.toLowerCase().includes(search.toLowerCase());
+    const s = search.toLowerCase();
+    const book = String(r.book || "");
+    const user = String(r.user || "");
+    const text = String(r.text || "");
+    const matchSearch = !s || book.toLowerCase().includes(s) || user.toLowerCase().includes(s) || text.toLowerCase().includes(s);
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -43,8 +69,8 @@ export default function ReviewsSection() {
   const toggleAll = () => setSelected(selected.length === paginated.length ? [] : paginated.map(r => r.id));
 
   const pending = reviews.filter(r => r.status === "pending").length;
-  const approved = reviews.filter(r => r.status === "approved").length;
-  const avgRating = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
+  const approved = reviews.filter(r => r.status === "approved" || r.status === "published").length;
+  const avgRating = reviews.length ? (reviews.reduce((s, r) => s + (Number(r.rating)||0), 0) / reviews.length).toFixed(1) : "0.0";
 
   return (
     <>
@@ -77,7 +103,7 @@ export default function ReviewsSection() {
           )}
         </div>
 
-        {paginated.length === 0 ? <EmptyState icon={Star} title="No reviews found" desc="Try a different filter." /> : (
+        {loading ? <div style={{ textAlign:"center", padding:"40px 0", color:"var(--text-muted)", fontSize:"0.82rem" }}>Loading reviews…</div> : paginated.length === 0 ? <EmptyState icon={Star} title="No reviews found" desc={reviews.length===0 ? "No reviews in database." : "Try a different filter."} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>

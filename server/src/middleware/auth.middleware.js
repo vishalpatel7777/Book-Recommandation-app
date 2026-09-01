@@ -29,4 +29,18 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticateToken, isAdmin };
+const isAuthor = (req, res, next) => {
+  if (!req.user || (req.user.role !== "author" && req.user.role !== "admin")) {
+    return res.status(403).json({ message: "Access denied: Author privileges required." });
+  }
+  next();
+};
+
+const isAuthorOrAdmin = (req, res, next) => {
+  if (!req.user || !["author", "admin"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Access denied: Author or Admin required." });
+  }
+  next();
+};
+
+module.exports = { authenticateToken, isAdmin, isAuthor, isAuthorOrAdmin };

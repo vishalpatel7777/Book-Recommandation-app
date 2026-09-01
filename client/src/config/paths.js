@@ -47,6 +47,11 @@ const PATHS = {
   ADMIN_ADD_BOOK: "/admin/books/add-book",
   ADMIN_EDIT_BOOK: (id) => `/admin/books/edit-book/${id}`,
 
+  // Author
+  AUTHOR_LOGIN: "/author/login",
+  AUTHOR_REGISTER: "/author/register",
+  AUTHOR_DASHBOARD: "/author/dashboard",
+
   // Fallback
   NOT_FOUND: "/*",
 };

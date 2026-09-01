@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Copy, Send, Eye } from "lucide-react";
 import { MOCK_NOTIFICATIONS } from "../cmsData";
+import api from "../../../../services/axios";
 import { st, SectionTitle, StatusBadge, Modal, ConfirmDialog, Drawer, SearchBar, EmptyState, Field, ActionBtn, Pagination, useToastEmitter } from "../cmsUi";
 
 const CHANNELS = ["email", "push", "sms"];
@@ -64,12 +65,12 @@ function PreviewDrawer({ tpl, onClose }) {
       <div>
         <span style={st.label}>Message Preview</span>
         <div style={{ background: "var(--bg-page)", border: "1px solid var(--border)", borderRadius: 8, padding: "16px", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.6, fontFamily: "var(--font-body)" }}>
-          {tpl.message.replace("{{name}}", "Anjali").replace("{{order_id}}", "ORD-1091").replace("{{book}}", "Atomic Habits").replace("{{amount}}", "₹349").replace("{{rating}}", "5")}
+          {tpl.message?.replace("{{name}}", "Anjali").replace("{{order_id}}", "ORD-1091").replace("{{book}}", "Atomic Habits").replace("{{amount}}", "₹349").replace("{{rating}}", "5")}
         </div>
       </div>
       <div style={{ marginTop: 20 }}>
         <span style={st.label}>Stats</span>
-        <p style={{ fontSize: "0.88rem", color: "var(--text-primary)" }}>{tpl.sent.toLocaleString()} sent</p>
+        <p style={{ fontSize: "0.88rem", color: "var(--text-primary)" }}>{(tpl.sent || 0).toLocaleString()} sent</p>
       </div>
       <button className="btn btn-secondary btn-sm" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
     </div>
@@ -78,40 +79,90 @@ function PreviewDrawer({ tpl, onClose }) {
 
 export default function NotificationCenterSection() {
   const toast = useToastEmitter();
-  const [notifs, setNotifs] = useState(MOCK_NOTIFICATIONS);
+  const [notifs, setNotifs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [previewDrawer, setPreviewDrawer] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [page, setPage] = useState(1);
   const PER_PAGE = 10;
 
+  const fetchNotifs = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get("/cms/notifications", { params: { limit: 50 } });
+      const list = data?.data ?? data;
+      if (Array.isArray(list) && list.length) {
+        setNotifs(list.map(n => ({ ...n, id: n._id || n.id, sent: n.sent || 0 })));
+      } else if (Array.isArray(data?.data?.data)) {
+        setNotifs(data.data.data.map(n => ({ ...n, id: n._id || n.id, sent: n.sent || 0 })));
+      } else {
+        setNotifs(MOCK_NOTIFICATIONS);
+      }
+    } catch {
+      setNotifs(MOCK_NOTIFICATIONS);
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchNotifs(); }, []);
+
   const filtered = notifs.filter(n => n.template.toLowerCase().includes(search.toLowerCase()));
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const openAdd = () => { setForm(EMPTY); setModal("add"); };
-  const openEdit = (n) => { setForm({ ...n }); setModal("edit"); };
-  const clone = (n) => {
-    setNotifs(prev => [...prev, { ...n, id: `n${Date.now()}`, template: `${n.template} (Copy)`, status: "draft", sent: 0 }]);
-    toast?.("Template cloned");
-  };
-  const testSend = (n) => toast?.(`Test ${n.channel} sent for "${n.template}"`, "info");
+  const openAdd = () => { setForm(EMPTY); setEditingId(null); setModal("add"); };
+  const openEdit = (n) => { setForm({ ...n }); setEditingId(n._id || n.id); setModal("edit"); };
 
-  const save = () => {
+  const clone = async (n) => {
+    const id = n._id || n.id;
+    try {
+      const { data } = await api.post(`/cms/notifications/${id}/duplicate`);
+      const saved = data?.data ?? data;
+      setNotifs(prev => [...prev, { ...saved, id: saved._id || saved.id, sent: saved.sent || 0 }]);
+      toast?.("Template cloned (live)");
+    } catch {
+      setNotifs(prev => [...prev, { ...n, id: `n${Date.now()}`, template: `${n.template} (Copy)`, status: "draft", sent: 0 }]);
+      toast?.("Template cloned (local)");
+    }
+  };
+  const testSend = (n) => toast?.(`Test ${n.channel} sent for "${n.template}" — check email/logs`, "info");
+
+  const save = async () => {
     if (!form.template.trim()) { toast?.("Template name is required", "error"); return; }
     if (!form.message.trim()) { toast?.("Message body is required", "error"); return; }
-    if (modal === "add") {
-      setNotifs(prev => [...prev, { ...form, id: `n${Date.now()}`, sent: 0 }]);
-      toast?.("Template created");
-    } else {
-      setNotifs(prev => prev.map(n => n.id === form.id ? { ...form } : n));
-      toast?.("Template updated");
+    try {
+      if (modal === "add") {
+        const { data } = await api.post("/cms/notifications", form);
+        const saved = data?.data ?? data;
+        setNotifs(prev => [...prev, { ...saved, id: saved._id || saved.id, sent: saved.sent || 0 }]);
+        toast?.("Template created (live)");
+      } else {
+        const { data } = await api.put(`/cms/notifications/${editingId}`, form);
+        const saved = data?.data ?? data;
+        setNotifs(prev => prev.map(x => (x._id || x.id) === editingId ? { ...x, ...saved, id: saved._id || saved.id } : x));
+        toast?.("Template updated (live)");
+      }
+      setModal(null);
+    } catch (e) {
+      toast?.(e?.response?.data?.message || "Save failed", "error");
     }
-    setModal(null);
   };
 
-  const deleteTemplate = (n) => { setNotifs(prev => prev.filter(x => x.id !== n.id)); toast?.("Template deleted"); };
+  const deleteTemplate = async (n) => {
+    const id = n._id || n.id;
+    try {
+      await api.delete(`/cms/notifications/${id}`);
+      setNotifs(prev => prev.filter(x => (x._id || x.id) !== id));
+      toast?.("Template deleted (live)");
+    } catch {
+      setNotifs(prev => prev.filter(x => x.id !== n.id));
+      toast?.("Template deleted (local)");
+    }
+  };
+
+  if (loading) return <><SectionTitle>Notification Center</SectionTitle><div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)", fontSize: "0.82rem" }}>Loading templates…</div></>;
 
   return (
     <>
@@ -140,7 +191,7 @@ export default function NotificationCenterSection() {
                   </td>
                   <td style={{ ...st.td, fontFamily: "monospace", fontSize: "0.72rem", color: "var(--text-muted)" }}>{n.trigger}</td>
                   <td style={st.td}><StatusBadge status={n.status} /></td>
-                  <td style={{ ...st.td, fontWeight: 600 }}>{n.sent.toLocaleString()}</td>
+                  <td style={{ ...st.td, fontWeight: 600 }}>{(n.sent || 0).toLocaleString()}</td>
                   <td style={st.td}>
                     <div style={{ display: "flex", gap: 5 }}>
                       <ActionBtn onClick={() => setPreviewDrawer(n)}><Eye size={11} /></ActionBtn>

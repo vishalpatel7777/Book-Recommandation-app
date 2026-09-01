@@ -17,7 +17,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "https://www.bing.com/th?id=OIP.S_BEyoTYNIwRpRXmQWtKJAHaHa", // Placeholder image
     },
-    role: { type: String, default: "user", enum: ["user", "admin"], index: true }, // Added index
+    role: { type: String, default: "user", enum: ["user", "admin", "author"], index: true }, // Added index - author role for content creators
+    authorProfile: {
+      penName: { type: String, trim: true, default: "" },
+      bio: { type: String, default: "" },
+      verified: { type: Boolean, default: false },
+      authorId: { type: mongoose.Schema.Types.ObjectId, ref: "Author", default: null },
+    },
     lastLogin: { type: Date, default: null },
     wishlist: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Book", default: [] }, // Corrected ref to 'Book'

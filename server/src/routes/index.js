@@ -17,9 +17,11 @@ const readingStatusRoutes = require("./readingStatus.routes");
 const commerceRoutes = require("./commerce.routes");
 // Import CMS routes
 const cmsRoutes = require("./cms.routes");
+const authorRoutes = require("./author.routes");
 
 // Mount all routes — CMS public routes must be before any router that uses global auth middleware
 router.use("/", authRoutes);
+router.use("/", authorRoutes);
 router.use("/", cmsRoutes); // CMS routes (contains public /feature-flags, /homepage-blocks, /authors, /categories, /promotions/active)
 router.use("/", bookRoutes);
 router.use("/", wishlistRoutes);

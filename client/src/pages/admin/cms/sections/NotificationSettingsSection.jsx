@@ -1,18 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Mail, Smartphone, MessageSquare, Send } from "lucide-react";
 import { NOTIF_SETTINGS } from "../cmsData";
+import api from "../../../../services/axios";
 import { st, SectionTitle, Toggle, useToastEmitter } from "../cmsUi";
 
 export default function NotificationSettingsSection() {
   const toast = useToastEmitter();
   const [settings, setSettings] = useState(NOTIF_SETTINGS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get("/cms/notification-settings")
+      .then(({ data }) => {
+        const v = data?.data ?? data;
+        const list = v?.settings || (Array.isArray(v) ? v : null);
+        if (list && Array.isArray(list) && list.length) setSettings(list);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const toggle = (id, channel) => {
     setSettings(prev => prev.map(s => s.id === id ? { ...s, [channel]: !s[channel] } : s));
   };
 
-  const save = () => toast?.("Notification settings saved");
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.put("/cms/notification-settings", { settings });
+      toast?.("Notification settings saved (live)", "success");
+    } catch (e) {
+      toast?.(e?.response?.data?.message || "Save failed", "error");
+    } finally { setSaving(false); }
+  };
   const testSend = (s, channel) => toast?.(`Test ${channel} sent for "${s.event}"`, "info");
+
+  if (loading) return <><SectionTitle>Notification Settings</SectionTitle><div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)", fontSize: "0.82rem" }}>Loading notification settings…</div></>;
 
   return (
     <>
@@ -62,14 +86,14 @@ export default function NotificationSettingsSection() {
           <div>
             <p style={{ fontSize: "0.83rem", fontWeight: 500, color: "var(--text-primary)", marginBottom: 4 }}>Channel Configuration</p>
             <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
-              SMS and Push channels require backend integration. Configure API keys in <strong>Integrations</strong> to activate these channels.
+              SMS and Push channels require backend integration. Configure API keys in <strong>Integrations</strong> to activate these channels. Settings are persisted to <code>SiteSetting/notifications</code>.
             </p>
           </div>
         </div>
       </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-        <button className="btn btn-primary btn-sm" onClick={save}>Save Settings</button>
+        <button className="btn btn-primary btn-sm" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Settings"}</button>
         <button className="btn btn-secondary btn-sm" onClick={() => toast?.("All channels tested", "info")}>Test All</button>
       </div>
     </>

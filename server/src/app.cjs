@@ -12,8 +12,17 @@ const fs = require("fs");
 const cookieParser = require("cookie-parser");
 
 const { globalLimiter } = require("./middleware/rateLimiter");
+const logger = require("./utils/logger");
 
 const app = express();
+
+// --- Request ID + structured logging (must be early for correlation) ---
+app.use((req, res, next) => {
+  const requestId = req.headers["x-request-id"] || Math.random().toString(36).slice(2, 10);
+  req.requestId = requestId;
+  res.setHeader("X-Request-Id", requestId);
+  next();
+});
 
 // --- Security headers (must be early) ---
 app.use(helmet());
@@ -65,6 +74,13 @@ const { registerRoutes } = require("./routes/index");
 const { errorMiddleware } = require("./middleware/error.middleware");
 
 registerRoutes(app);
+
+// --- 404 handler (before error middleware) ---
+app.use((req, res) => {
+  logger.warn("Route not found", { method: req.method, url: req.originalUrl });
+  res.status(404).json({ message: `Route ${req.originalUrl} not found` });
+});
+
 app.use(errorMiddleware);
 
 app.get("/", (req, res) => {

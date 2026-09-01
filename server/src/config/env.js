@@ -13,6 +13,8 @@ const requiredSchema = z.object({
   CASHFREE_SECRET_KEY: z.string().optional(),
   CASHFREE_MODE: z.enum(["sandbox", "production"]).default("sandbox"),
   BASE_URL: z.string().url().optional(),
+  LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info").optional(),
+  LOG_FILE: z.string().optional(),
 });
 
 const parsed = requiredSchema.safeParse(process.env);
