@@ -1,48 +1,29 @@
-import axios from "axios";
-import { API_BASE_URL } from "../config/api";
+import api from "./axios";
 
-const API_URL = `${API_BASE_URL}/cms/branding`;
+const BASE = "/cms/branding";
+const PUBLIC_BASE = "/branding";
 
-/**
- * Fetch current branding settings
- */
 export const getBranding = async () => {
-  const response = await axios.get(API_URL);
-  return response.data;
+  const { data } = await api.get(PUBLIC_BASE);
+  return data?.data ?? data;
 };
-
-/**
- * Update branding text fields (site title and tagline)
- */
-export const updateBrandingText = async (data) => {
-  const response = await axios.put(API_URL, data);
-  return response.data;
+export const getBrandingAdmin = async () => {
+  const { data } = await api.get(BASE);
+  return data?.data?.value ?? data?.data ?? data;
 };
-
-/**
- * Upload logo file
- */
+export const updateBrandingText = async (payload) => {
+  const { data } = await api.put(BASE, payload);
+  return data?.data?.value ?? data?.data ?? data;
+};
 export const uploadLogo = async (file) => {
-  const formData = new FormData();
-  formData.append("file", file);
-  const response = await axios.post(`${API_URL}/logo`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-  return response.data;
+  const fd = new FormData();
+  fd.append("file", file);
+  const { data } = await api.post(`${BASE}/logo`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+  return data?.data?.value ?? data?.data ?? data;
 };
-
-/**
- * Upload favicon file
- */
 export const uploadFavicon = async (file) => {
-  const formData = new FormData();
-  formData.append("file", file);
-  const response = await axios.post(`${API_URL}/favicon`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-  return response.data;
+  const fd = new FormData();
+  fd.append("file", file);
+  const { data } = await api.post(`${BASE}/favicon`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+  return data?.data?.value ?? data?.data ?? data;
 };

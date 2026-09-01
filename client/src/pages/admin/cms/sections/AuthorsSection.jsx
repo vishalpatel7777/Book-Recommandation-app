@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle, Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { MOCK_AUTHORS } from "../cmsData";
 import { st, SectionTitle, StatusBadge, Toggle, Modal, ConfirmDialog, Drawer, SearchBar, EmptyState, Field, ActionBtn, Checkbox, Pagination } from "../cmsUi";
 import { useToastEmitter } from "../cmsUi";
+import api from "../../../../services/axios";
 
 const EMPTY = { name: "", bio: "", website: "", twitter: "", instagram: "", verified: false, featured: false, followers: 0 };
 
@@ -45,6 +46,13 @@ function AuthorForm({ value, onChange }) {
 export default function AuthorsSection() {
   const toast = useToastEmitter();
   const [authors, setAuthors] = useState(MOCK_AUTHORS);
+  const [live, setLive] = useState(false);
+  useEffect(() => {
+    api.get("/cms/authors").then(({ data }) => {
+      const list = data?.data ?? data;
+      if (Array.isArray(list) && list.length) { setAuthors(list.map(a=>({ ...a, id: a._id||a.id, avatarUrl: a.image||a.avatarUrl, books: a.booksCount ?? a.books ?? 0, followers: a.followers ?? 0, joined: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : a.joined })) ); setLive(true); }
+    }).catch(()=>{});
+  }, []);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState([]);
   const [modal, setModal] = useState(null); // null | { mode: "add"|"edit", data }
@@ -62,21 +70,37 @@ export default function AuthorsSection() {
   const openView = (a) => setDrawer(a);
   const openDelete = (a) => setConfirm(a);
 
-  const save = () => {
+  const save = async () => {
     if (!form.name.trim()) { toast?.("Name is required", "error"); return; }
-    if (modal.mode === "add") {
-      setAuthors((prev) => [...prev, { ...form, id: `au${Date.now()}`, books: 0, joined: "Jun 2025" }]);
-      toast?.("Author added");
-    } else {
-      setAuthors((prev) => prev.map((a) => a.id === modal.id ? { ...a, ...form } : a));
-      toast?.("Author updated");
+    try {
+      if (modal.mode === "add") {
+        const payload = { name: form.name, bio: form.bio, website: form.website, twitter: form.twitter, instagram: form.instagram, verified: form.verified, featured: form.featured, followers: Number(form.followers)||0, image: form.avatarUrl||form.image||"" };
+        const { data } = await api.post("/cms/authors", payload);
+        const saved = data?.data ?? data;
+        setAuthors((prev) => [...prev, { ...form, ...saved, id: saved._id||saved.id, avatarUrl: saved.image||form.avatarUrl, books: saved.booksCount ?? 0 }]);
+        toast?.("Author added (live)");
+      } else {
+        const payload = { name: form.name, bio: form.bio, website: form.website, twitter: form.twitter, instagram: form.instagram, verified: form.verified, featured: form.featured, followers: Number(form.followers)||0, image: form.avatarUrl||form.image||"" };
+        const id = modal.id;
+        const { data } = await api.put(`/cms/authors/${id}`, payload);
+        const saved = data?.data ?? data;
+        setAuthors((prev) => prev.map((a) => a.id === id ? { ...a, ...form, ...saved } : a));
+        toast?.("Author updated (live)");
+      }
+      setModal(null);
+    } catch (e) {
+      if (live) { toast?.(e?.response?.data?.message||"Save failed","error"); return; }
+      // fallback to local when backend not reachable
+      if (modal.mode === "add") { setAuthors((prev) => [...prev, { ...form, id: `au${Date.now()}`, books: 0, joined: "Jun 2025" }]); toast?.("Author added (local)"); }
+      else { setAuthors((prev) => prev.map((a) => a.id === modal.id ? { ...a, ...form } : a)); toast?.("Author updated (local)"); }
+      setModal(null);
     }
-    setModal(null);
   };
 
-  const deleteAuthor = (a) => {
-    setAuthors((prev) => prev.filter((x) => x.id !== a.id));
-    toast?.("Author removed");
+  const deleteAuthor = async (a) => {
+    const id = a._id || a.id;
+    try { await api.delete(`/cms/authors/${id}`); setAuthors((prev) => prev.filter((x) => (x._id||x.id) !== id)); toast?.("Author removed (live)"); }
+    catch { setAuthors((prev) => prev.filter((x) => x.id !== a.id)); toast?.("Author removed (local)"); }
   };
 
   const toggleSelect = (id) => setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);

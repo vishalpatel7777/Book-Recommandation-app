@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Copy, ToggleLeft } from "lucide-react";
 import { MOCK_COUPONS } from "../cmsData";
+import api from "../../../../services/axios";
 import { st, SectionTitle, StatusBadge, Toggle, Modal, ConfirmDialog, SearchBar, EmptyState, Field, ActionBtn, Checkbox, Pagination, useToastEmitter } from "../cmsUi";
 
 const EMPTY = { code: "", type: "percent", value: "", maxDiscount: "", min: 0, maxUses: "", perUser: 1, startDate: "", expiry: "", categories: [], books: [], status: "draft" };
@@ -60,6 +61,7 @@ function CouponForm({ value, onChange }) {
 export default function CouponsSection() {
   const toast = useToastEmitter();
   const [coupons, setCoupons] = useState(MOCK_COUPONS);
+  useEffect(()=>{ api.get("/cms/coupons").then(({data})=>{ const list=data?.data??data; if(Array.isArray(list)&&list.length) setCoupons(list.map(c=>({ ...c, id:c._id||c.id, code:c.code, type:c.type, value:c.value, min:c.minOrder??c.min??0, maxDiscount:c.maxDiscount??"", maxUses:c.maxUses??"", expiry:c.expiry||"", status:c.status||"active" }))); }).catch(()=>{}); },[]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState([]);
@@ -84,20 +86,18 @@ export default function CouponsSection() {
     toast?.("Coupon duplicated");
   };
 
-  const save = () => {
+  const save = async () => {
     if (!form.code.trim()) { toast?.("Code is required", "error"); return; }
     if (!form.value) { toast?.("Discount value is required", "error"); return; }
-    if (modal.mode === "add") {
-      setCoupons((prev) => [...prev, { ...form, id: `cou${Date.now()}`, uses: 0 }]);
-      toast?.("Coupon created");
-    } else {
-      setCoupons((prev) => prev.map((c) => c.id === modal.id ? { ...c, ...form } : c));
-      toast?.("Coupon updated");
-    }
-    setModal(null);
+    const payload={ code: form.code.toUpperCase(), type: form.type, value: Number(form.value), maxDiscount: form.maxDiscount?Number(form.maxDiscount):null, minOrder: Number(form.min)||0, min: Number(form.min)||0, maxUses: form.maxUses?Number(form.maxUses):null, perUser: Number(form.perUser)||1, categories: form.categories||[], books: form.books||[], status: form.status||"draft", expiry: form.expiry||"", startDate: form.startDate||"" };
+    try{
+      if (modal.mode === "add") { const {data}=await api.post("/cms/coupons", payload); const saved=data?.data??data; setCoupons((prev)=>[...prev,{...saved, id:saved._id||saved.id, code:saved.code, type:saved.type, value:saved.value}]); toast?.("Coupon created (live)"); }
+      else { const id=modal.id; const {data}=await api.put(`/cms/coupons/${id}`, payload); const saved=data?.data??data; setCoupons((prev)=>prev.map(c=>(c._id||c.id)===id?{...c,...saved, id:saved._id||saved.id}:c)); toast?.("Coupon updated (live)"); }
+      setModal(null);
+    }catch(e){ toast?.(e?.response?.data?.message||"Save failed","error"); }
   };
 
-  const deleteCoupon = (c) => { setCoupons((prev) => prev.filter((x) => x.id !== c.id)); toast?.("Coupon deleted"); };
+  const deleteCoupon = async (c) => { const id=c._id||c.id; try{ await api.delete(`/cms/coupons/${id}`); setCoupons((prev)=>prev.filter(x=>(x._id||x.id)!==id)); toast?.("Coupon deleted (live)"); }catch{ setCoupons((prev)=>prev.filter(x=>x.id!==c.id)); toast?.("Coupon deleted (local)"); } };
   const toggleSelect = (id) => setSelected((s) => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   const toggleAll = () => setSelected(selected.length === paginated.length ? [] : paginated.map(c => c.id));
 

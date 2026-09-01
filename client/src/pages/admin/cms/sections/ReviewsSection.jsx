@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Star, Eye, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { MOCK_REVIEWS } from "../cmsData";
 import { st, SectionTitle, KpiRow, StatusBadge, ConfirmDialog, Drawer, SearchBar, EmptyState, ActionBtn, Checkbox, Pagination, useToastEmitter } from "../cmsUi";
+import api from "../../../../services/axios";
 
 function Stars({ n }) {
   return (
@@ -14,6 +15,7 @@ function Stars({ n }) {
 export default function ReviewsSection() {
   const toast = useToastEmitter();
   const [reviews, setReviews] = useState(MOCK_REVIEWS);
+  useEffect(()=>{ api.get("/cms/reviews").then(({data})=>{ const list=data?.data??data; if(Array.isArray(list)&&list.length){ setReviews(list.map(r=>({ id:r._id||r.id, book:r.bookId||r.book||"—", user:r.userId||r.user||"user", rating:r.rating||0, text:r.review||r.comment||r.text||"", date:r.createdAt?new Date(r.createdAt).toLocaleDateString():r.date, status:r.status||"pending", raw:r }))); } }).catch(()=>{}); },[]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState([]);
@@ -29,9 +31,13 @@ export default function ReviewsSection() {
   });
   const paginated = filtered.slice((page-1)*PER_PAGE, page*PER_PAGE);
 
-  const approve = (id) => { setReviews(prev => prev.map(r => r.id === id ? { ...r, status: "approved" } : r)); toast?.("Review approved"); };
-  const reject = (id) => { setReviews(prev => prev.map(r => r.id === id ? { ...r, status: "rejected" } : r)); toast?.("Review rejected"); };
-  const deleteReview = (r) => { setReviews(prev => prev.filter(x => x.id !== r.id)); toast?.("Review deleted"); };
+  const approve = async (id) => {
+    try{ const r=reviews.find(x=>x.id===id); const rid=r?.raw?._id||r?._id||id; await api.patch(`/cms/reviews/${rid}/status`,{ status:"published" }); setReviews(prev=>prev.map(x=>x.id===id?{...x,status:"approved"}:x)); toast?.("Review approved (live)"); }catch{ setReviews(prev => prev.map(r => r.id === id ? { ...r, status: "approved" } : r)); toast?.("Review approved (local)"); }
+  };
+  const reject = async (id) => {
+    try{ const r=reviews.find(x=>x.id===id); const rid=r?.raw?._id||r?._id||id; await api.patch(`/cms/reviews/${rid}/status`,{ status:"flagged" }); setReviews(prev=>prev.map(x=>x.id===id?{...x,status:"rejected"}:x)); toast?.("Review rejected (live)"); }catch{ setReviews(prev => prev.map(r => r.id === id ? { ...r, status: "rejected" } : r)); toast?.("Review rejected (local)"); }
+  };
+  const deleteReview = async (r) => { const rid=r?.raw?._id||r?._id||r.id; try{ await api.delete(`/cms/reviews/${rid}`); setReviews(prev=>prev.filter(x=>x.id!==r.id)); toast?.("Review deleted (live)"); }catch{ setReviews(prev=>prev.filter(x=>x.id!==r.id)); toast?.("Review deleted (local)"); } };
 
   const toggleSelect = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   const toggleAll = () => setSelected(selected.length === paginated.length ? [] : paginated.map(r => r.id));

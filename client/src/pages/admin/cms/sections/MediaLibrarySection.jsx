@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FolderOpen, Upload, Eye, Pencil, Copy, Download, Trash2, X } from "lucide-react";
 import { MOCK_MEDIA } from "../cmsData";
+import api from "../../../../services/axios";
 import { st, SectionTitle, ConfirmDialog, Drawer, SearchBar, EmptyState, ActionBtn, useToastEmitter } from "../cmsUi";
 
 const FILTER_TYPES = ["all", "image", "banner", "logo"];
@@ -8,6 +9,7 @@ const FILTER_TYPES = ["all", "image", "banner", "logo"];
 export default function MediaLibrarySection() {
   const toast = useToastEmitter();
   const [media, setMedia] = useState(MOCK_MEDIA);
+  useEffect(()=>{ api.get("/cms/media").then(({data})=>{ const list=data?.data??data; if(Array.isArray(list)&&list.length) setMedia(list.map(m=>({ ...m, id:m._id||m.id, name:m.name||m.publicId, type:m.type||"image", size:m.size||"", url:m.url||"", used:!!m.used, uploaded: m.uploadedAt ? new Date(m.uploadedAt).toLocaleDateString() : m.uploaded }))); }).catch(()=>{}); },[]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [usedFilter, setUsedFilter] = useState("all");
@@ -23,12 +25,22 @@ export default function MediaLibrarySection() {
     return ms && mt && mu;
   });
 
-  const deleteFile = (f) => { setMedia(prev => prev.filter(x => x.id !== f.id)); toast?.("File deleted"); };
+  const fileInputRef = useRef(null);
+  const uploadFiles = (e) => {
+    const files = e.target.files;
+    if(!files?.length) return;
+    Array.from(files).forEach(async (file)=>{
+      const fd=new FormData(); fd.append("file", file);
+      try{ const {data}=await api.post("/cms/media/upload", fd, { headers:{ "Content-Type":"multipart/form-data" } }); const saved=data?.data??data; setMedia(prev=>[{ ...saved, id:saved._id||saved.id, name:saved.name||saved.publicId, url:saved.url, type:saved.type||"image", size:saved.size||"", uploaded: saved.uploadedAt?new Date(saved.uploadedAt).toLocaleDateString():new Date().toLocaleDateString(), used:!!saved.used }, ...prev]); toast?.("File uploaded (live)"); }catch{ toast?.("Upload failed","error"); }
+    });
+    e.target.value="";
+  };
+  const deleteFile = async (f) => { const id=f._id||f.id; try{ await api.delete(`/cms/media/${id}`); setMedia(prev => prev.filter(x => (x._id||x.id) !== id)); toast?.("File deleted (live)"); }catch{ setMedia(prev => prev.filter(x => x.id !== f.id)); toast?.("File deleted (local)"); } };
   const copyUrl = (f) => { navigator.clipboard?.writeText(f.url || `https://cdn.bookmosaic.com/${f.name}`).catch(() => {}); toast?.("URL copied", "info"); };
-  const rename = () => {
+  const rename = async () => {
     if (!newName.trim()) return;
-    setMedia(prev => prev.map(f => f.id === renaming.id ? { ...f, name: newName } : f));
-    toast?.("File renamed");
+    const id=renaming._id||renaming.id;
+    try{ await api.put(`/cms/media/${id}`,{ name:newName }); setMedia(prev => prev.map(f => (f._id||f.id)===id ? { ...f, name: newName } : f)); toast?.("File renamed (live)"); }catch{ setMedia(prev => prev.map(f => f.id === renaming.id ? { ...f, name: newName } : f)); toast?.("File renamed (local)"); }
     setRenaming(null);
     setNewName("");
   };
@@ -37,7 +49,7 @@ export default function MediaLibrarySection() {
 
   return (
     <>
-      <SectionTitle action={<button className="btn btn-primary btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}><Upload size={13} />Upload Files</button>}>
+      <SectionTitle action={<><input ref={fileInputRef} type="file" multiple style={{ display:"none" }} onChange={uploadFiles} /><button onClick={()=>fileInputRef.current?.click()} className="btn btn-primary btn-sm" style={{ display: "flex", alignItems: "center", gap: 6 }}><Upload size={13} />Upload Files</button></>}>
         Media Library
       </SectionTitle>
 

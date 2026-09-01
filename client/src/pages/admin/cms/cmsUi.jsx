@@ -90,6 +90,9 @@ export function KpiRow({ items }) {
 /* ── Toast system ── */
 let _addToast = null;
 export function useToastEmitter() { return _addToast; }
+export function useToast() {
+  return (msg, type = "success") => _addToast?.(msg, type);
+}
 
 export function ToastContainer() {
   const [toasts, setToasts] = useState([]);

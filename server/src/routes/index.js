@@ -18,8 +18,9 @@ const commerceRoutes = require("./commerce.routes");
 // Import CMS routes
 const cmsRoutes = require("./cms.routes");
 
-// Mount all routes
+// Mount all routes — CMS public routes must be before any router that uses global auth middleware
 router.use("/", authRoutes);
+router.use("/", cmsRoutes); // CMS routes (contains public /feature-flags, /homepage-blocks, /authors, /categories, /promotions/active)
 router.use("/", bookRoutes);
 router.use("/", wishlistRoutes);
 router.use("/", cartRoutes);
@@ -31,7 +32,6 @@ router.use("/", orderRoutes);
 router.use("/", userRoutes);
 router.use("/", readingStatusRoutes);
 router.use("/", commerceRoutes);
-router.use("/", cmsRoutes); // CMS routes
 
 function registerRoutes(app) {
   app.use(API_PREFIX, router); // Change API_PREFIX in paths.js → affects entire API

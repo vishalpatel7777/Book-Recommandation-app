@@ -6,9 +6,12 @@ import { ToastProvider } from '../components/common/Toast/ToastProvider';
 import { useSyncUserState } from '../hooks';
 import ErrorBoundary from '../components/common/ErrorBoundary/ErrorBoundary';
 import Loader from '../components/common/Loader/Loader';
+import { useBrandingLive, useThemeLive } from '../hooks/useCmsLive';
 
 function LayoutInner() {
   useSyncUserState();
+  useBrandingLive();
+  useThemeLive();
   return (
     <div className="main-layout">
       <Navbar />

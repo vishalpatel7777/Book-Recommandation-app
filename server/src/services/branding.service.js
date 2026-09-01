@@ -1,4 +1,5 @@
 const Branding = require("../models/branding.model");
+const SiteSetting = require("../models/siteSetting.model");
 const { uploadToGoogleDrive, cleanupLocalFile } = require("../utils/s3Helper");
 const path = require("path");
 const fs = require("fs");
@@ -29,7 +30,22 @@ const getBranding = async () => {
 const updateBranding = async (updates, userId) => {
   const branding = await getBranding();
   Object.assign(branding, updates, { updatedBy: userId });
-  return await branding.save();
+  const saved = await branding.save();
+  // Sync to SiteSetting so public GET /branding (SiteSetting) stays live
+  try {
+    const payload = {
+      siteTitle: saved.siteTitle,
+      tagline: saved.tagline,
+      logoUrl: saved.logoUrl || "",
+      faviconUrl: saved.faviconUrl || "",
+    };
+    await SiteSetting.findOneAndUpdate(
+      { group: "branding" },
+      { $set: { value: payload, updatedBy: userId || null } },
+      { upsert: true, new: true }
+    );
+  } catch (_) {}
+  return saved;
 };
 
 /**

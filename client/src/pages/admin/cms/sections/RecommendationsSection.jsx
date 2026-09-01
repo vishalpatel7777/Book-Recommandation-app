@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { Star, TrendingUp, DollarSign, MousePointer } from "lucide-react";
 import { st, SectionTitle, KpiRow } from "../cmsUi";
+import api from "../../../../services/axios";
 
 const TOP_RECOMMENDED = [
   { title: "Atomic Habits",        clicks: 1240, purchases: 186, revenue: "₹64,914", ctr: "15%" },
@@ -17,9 +19,12 @@ const FUNNEL = [
 ];
 
 export default function RecommendationsSection() {
+  const [live, setLive] = useState(null);
+  useEffect(()=>{ api.get("/cms/analytics/books").then(({data})=> { const list=data?.data??data; if(Array.isArray(list)&&list.length) setLive(list.map(b=>({ title:b.title, clicks: b.views||0, purchases:b.purchases||0, revenue: `₹${(b.price*(b.purchases||0)).toLocaleString()}`, ctr: b.views?`${((b.purchases/b.views)*100).toFixed(1)}%`:"0%" }))); }).catch(()=>{}); },[]);
+  const rows = live?.length ? live : TOP_RECOMMENDED;
   return (
     <>
-      <SectionTitle>Recommendation Analytics</SectionTitle>
+      <SectionTitle>Recommendation Analytics {live ? "· live" : ""}</SectionTitle>
 
       <KpiRow items={[
         { label: "Recommendation CTR",      value: "25.9%", icon: MousePointer, color: "var(--accent-sage)",  sub: "Shown → Clicked" },
@@ -55,7 +60,7 @@ export default function RecommendationsSection() {
             <tr>{["Book", "Clicks", "Purchases", "Revenue", "CTR"].map(h => <th key={h} style={st.th}>{h}</th>)}</tr>
           </thead>
           <tbody>
-            {TOP_RECOMMENDED.map((b, i) => (
+            {rows.map((b, i) => (
               <tr key={b.title}>
                 <td style={st.td}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

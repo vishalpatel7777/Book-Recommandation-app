@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, Download, Upload, Copy, Trash2, Plus } from "lucide-react";
 import { PRESETS } from "../cmsData";
 import { st, SectionTitle, ConfirmDialog, Modal, Field, ActionBtn, useToastEmitter } from "../cmsUi";
+import api from "../../../../services/axios";
 
 const DEFAULT_THEME = { primary: "#5C7A5E", accent: "#8B6F47", bg: "#FAF8F3", text: "#1a1a1a", secondary: "#5a6b5c", radius: "6", shadow: "md" };
 
@@ -18,13 +19,50 @@ export default function ThemeSection() {
   const [importText, setImportText] = useState("");
   const [confirm, setConfirm] = useState(null);
 
+  useEffect(() => {
+    api.get("/theme").then(({ data }) => {
+      const v = data?.data ?? data;
+      if (v && v.primary) { setColors((c)=>({ ...c, primary: v.primary||c.primary, accent: v.accent||c.accent, bg: v.bg||c.bg, text: v.textColor||v.text||c.text, secondary: v.secondary||c.secondary })); if(v.activePresetId) setSelected(v.activePresetId); if(v.radius) setRadius(v.radius.replace("px","")); if(v.shadow) setShadow(v.shadow); }
+    }).catch(()=>{});
+    api.get("/cms/theme").then(({ data }) => {
+      const v = data?.data?.value ?? data?.data ?? data;
+      if (v && v.primary) { setColors((c)=>({ ...c, primary: v.primary||c.primary, accent: v.accent||c.accent, bg: v.bg||c.bg })); }
+    }).catch(()=>{});
+  }, []);
+
   const selectPreset = (p) => {
     setSelected(p.id);
     setColors({ ...DEFAULT_THEME, primary: p.primary || p.colors?.primary, accent: p.accent || p.colors?.accent, bg: p.bg || p.colors?.bg });
   };
 
-  const apply = () => toast?.("Theme applied to storefront");
-  const saveTheme = () => toast?.("Theme saved");
+  const applyThemeVars = (c, r, s) => {
+    const root = document.documentElement;
+    root.style.setProperty("--accent-sage", c.primary);
+    root.style.setProperty("--accent-sage-bg", `${c.primary}14`);
+    root.style.setProperty("--accent-sage-text", c.primary);
+    root.style.setProperty("--color-primary", c.primary);
+    root.style.setProperty("--color-accent", c.accent);
+    root.style.setProperty("--bg-page", c.bg);
+    root.style.setProperty("--bg-card", c.bg === "#FFFFFF" ? "#ffffff" : c.bg);
+    root.style.setProperty("--text-primary", c.text);
+    // also inject for useThemeLive hook
+    try { localStorage.setItem("cms-theme", JSON.stringify({ ...c, radius:r, shadow:s })); } catch {}
+  };
+  const apply = async () => {
+    applyThemeVars(colors, radius, shadow);
+    // persist so user side sees it after refresh/navigation
+    try {
+      await api.put("/cms/theme", { activePresetId: selected, primary: colors.primary, accent: colors.accent, bg: colors.bg, textColor: colors.text, secondary: colors.secondary, radius: `${radius}px`, shadow });
+      toast?.("Theme applied to storefront (live)");
+    } catch(e){ toast?.("Theme preview applied locally, save failed: "+(e?.response?.data?.message||e.message),"error"); }
+  };
+  const saveTheme = async () => {
+    try {
+      await api.put("/cms/theme", { activePresetId: selected, primary: colors.primary, accent: colors.accent, bg: colors.bg, textColor: colors.text, secondary: colors.secondary, radius: `${radius}px`, shadow });
+      toast?.("Theme saved (live)");
+      applyThemeVars(colors, radius, shadow);
+    } catch(e){ toast?.(e?.response?.data?.message||"Save failed","error"); }
+  };
 
   const cloneTheme = () => {
     if (!cloneName.trim()) { toast?.("Name is required", "error"); return; }

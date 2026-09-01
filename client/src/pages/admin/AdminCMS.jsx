@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "../../services/axios";
+import { useToast } from "./cms/cmsUi";
 
 /* ── Section data ── */
 import { SECTIONS } from "./cms/cmsData";
@@ -55,30 +57,64 @@ const tableCell = st.td;
 /* ── Inline sections (Branding, Metadata, UserAnalytics, BookAnalytics, EventTracking, AuditLogs, Features, Integrations) ── */
 
 function BrandingSection() {
+  const toast = useToast();
+  const [form, setForm] = useState({ siteTitle: "", tagline: "", logoUrl: "", faviconUrl: "" });
+  const [loading, setLoading] = useState(true);
+  const logoRef = useRef(null);
+  const favRef = useRef(null);
+  useEffect(() => {
+    api.get("/branding").then(({ data }) => {
+      const v = data?.data ?? data;
+      setForm({ siteTitle: v.siteTitle || "", tagline: v.tagline || "", logoUrl: v.logoUrl || "", faviconUrl: v.faviconUrl || "" });
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+  const save = async () => {
+    try {
+      const { data } = await api.put("/cms/branding", { siteTitle: form.siteTitle, tagline: form.tagline });
+      const v = data?.data?.value ?? data?.data ?? data;
+      setForm((f) => ({ ...f, siteTitle: v.siteTitle ?? f.siteTitle, tagline: v.tagline ?? f.tagline }));
+      toast("Branding saved", "success");
+    } catch (e) { toast(e?.response?.data?.message || "Save failed", "error"); }
+  };
+  const upload = async (file, kind) => {
+    if (!file) return;
+    const fd = new FormData(); fd.append("file", file);
+    try {
+      const { data } = await api.post(`/cms/branding/${kind}`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      const v = data?.data?.value ?? data?.data ?? data;
+      setForm((f) => ({ ...f, logoUrl: v.logoUrl ?? f.logoUrl, faviconUrl: v.faviconUrl ?? f.faviconUrl }));
+      toast(`${kind} uploaded`, "success");
+    } catch (e) { toast(e?.response?.data?.message || "Upload failed", "error"); }
+  };
+  if (loading) return <p style={{ color: "var(--text-muted)" }}>Loading branding…</p>;
   return (
     <>
       <SectionTitle>Website Branding</SectionTitle>
       <div style={card}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-          {["Logo", "Favicon"].map((name) => (
+          {[
+            { name: "Logo", key: "logo", ref: logoRef, url: form.logoUrl },
+            { name: "Favicon", key: "favicon", ref: favRef, url: form.faviconUrl },
+          ].map(({ name, key, ref, url }) => (
             <div key={name}>
               <span style={label}>{name}</span>
-              <div style={{ border: "2px dashed var(--border-medium)", borderRadius: 8, padding: 24, textAlign: "center", cursor: "pointer", background: "var(--bg-surface)" }}
+              <input ref={ref} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => upload(e.target.files[0], key)} />
+              <div onClick={() => ref.current?.click()} style={{ border: "2px dashed var(--border-medium)", borderRadius: 8, padding: 24, textAlign: "center", cursor: "pointer", background: "var(--bg-surface)" }}
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--accent-sage)"}
                 onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--border-medium)"}>
-                <Upload size={18} style={{ color: "var(--text-faint)", margin: "0 auto 6px" }} />
-                <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Upload {name} (SVG, PNG)</p>
+                {url ? <img src={url} alt={name} style={{ maxHeight: 32, margin: "0 auto 6px", display: "block" }} /> : <Upload size={18} style={{ color: "var(--text-faint)", margin: "0 auto 6px" }} />}
+                <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{url ? "Click to replace" : `Upload ${name} (SVG, PNG)`}</p>
               </div>
             </div>
           ))}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 16 }}>
-          <div><span style={label}>Site Title</span><input style={inputSt} placeholder="e.g. BookMosaic" /></div>
-          <div><span style={label}>Tagline</span><input style={inputSt} placeholder="e.g. A World of Literature" /></div>
+          <div><span style={label}>Site Title</span><input style={inputSt} value={form.siteTitle} onChange={(e) => setForm((f) => ({ ...f, siteTitle: e.target.value }))} placeholder="e.g. BookMosaic" /></div>
+          <div><span style={label}>Tagline</span><input style={inputSt} value={form.tagline} onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))} placeholder="e.g. A World of Literature" /></div>
         </div>
         <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
-          <button className="btn btn-primary btn-sm">Save Branding</button>
-          <button className="btn btn-secondary btn-sm">Reset</button>
+          <button onClick={save} className="btn btn-primary btn-sm">Save Branding</button>
+          <button onClick={() => api.get("/branding").then(({ data }) => { const v = data?.data ?? data; setForm({ siteTitle: v.siteTitle||"", tagline: v.tagline||"", logoUrl: v.logoUrl||"", faviconUrl: v.faviconUrl||""}); toast("Reset", "success"); })} className="btn btn-secondary btn-sm">Reset</button>
         </div>
       </div>
     </>
@@ -86,61 +122,93 @@ function BrandingSection() {
 }
 
 function MetadataSection() {
+  const toast = useToast();
+  const [form, setForm] = useState({ seoTitle: "", metaDescription: "", keywords: "", ogTitle: "", ogDescription: "", ogImage: "" });
+  const [loading, setLoading] = useState(true);
+  const ogRef = useRef(null);
+  useEffect(() => {
+    api.get("/seo").then(({ data }) => {
+      const v = data?.data ?? data;
+      setForm({ seoTitle: v.seoTitle || "", metaDescription: v.metaDescription||"", keywords: v.keywords||"", ogTitle: v.ogTitle||"", ogDescription: v.ogDescription||"", ogImage: v.ogImage||"" });
+    }).catch(()=>{}).finally(()=>setLoading(false));
+  }, []);
+  const save = async () => {
+    try { await api.put("/cms/seo", form); toast("SEO saved", "success"); } catch(e){ toast(e?.response?.data?.message||"Save failed","error"); }
+  };
+  const uploadOg = async (file) => {
+    if(!file) return;
+    const fd=new FormData(); fd.append("file", file);
+    try{ const {data}=await api.post("/cms/seo/og-image", fd, {headers:{"Content-Type":"multipart/form-data"}}); const v=data?.data??data; setForm(f=>({...f, ogImage: v.ogImage||f.ogImage})); toast("OG image uploaded","success"); }catch(e){ toast(e?.response?.data?.message||"Upload failed","error"); }
+  };
+  if(loading) return <p style={{color:"var(--text-muted)"}}>Loading SEO…</p>;
+  const fields = [
+    { key:"seoTitle", lbl:"SEO Title", ph:"BookMosaic — Discover Your Next Read" },
+    { key:"metaDescription", lbl:"Meta Description", ph:"Curated book recommendations...", area:true },
+    { key:"keywords", lbl:"Keywords", ph:"buy books online, book recommendations, ebooks" },
+    { key:"ogTitle", lbl:"OpenGraph Title", ph:"BookMosaic" },
+    { key:"ogDescription", lbl:"OpenGraph Description", ph:"Open Graph description", area:true },
+  ];
   return (
     <>
       <SectionTitle>SEO & Metadata</SectionTitle>
       <div style={card}>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {[
-            { lbl: "SEO Title", ph: "BookMosaic — Discover Your Next Read" },
-            { lbl: "Meta Description", ph: "Curated book recommendations...", area: true },
-            { lbl: "Keywords", ph: "buy books online, book recommendations, ebooks" },
-            { lbl: "OpenGraph Title", ph: "BookMosaic" },
-            { lbl: "OpenGraph Description", ph: "Open Graph description", area: true },
-          ].map(({ lbl: l, ph, area }) => (
-            <div key={l}>
-              <span style={label}>{l}</span>
-              {area ? <textarea placeholder={ph} rows={2} style={{ ...inputSt, resize: "vertical" }} /> : <input style={inputSt} placeholder={ph} />}
+          {fields.map(({ key, lbl, ph, area }) => (
+            <div key={key}>
+              <span style={label}>{lbl}</span>
+              {area ? <textarea value={form[key]} onChange={(e)=>setForm(f=>({...f,[key]:e.target.value}))} placeholder={ph} rows={2} style={{ ...inputSt, resize: "vertical" }} /> : <input value={form[key]} onChange={(e)=>setForm(f=>({...f,[key]:e.target.value}))} style={inputSt} placeholder={ph} />}
             </div>
           ))}
           <div>
             <span style={label}>OpenGraph Image</span>
             <div style={{ display: "flex", gap: 8 }}>
-              <input style={{ ...inputSt, flex: 1 }} placeholder="https://yourdomain.com/og-image.png" />
-              <button className="btn btn-secondary btn-sm" style={{ whiteSpace: "nowrap" }}>Upload</button>
+              <input value={form.ogImage} onChange={(e)=>setForm(f=>({...f, ogImage:e.target.value}))} style={{ ...inputSt, flex: 1 }} placeholder="https://yourdomain.com/og-image.png" />
+              <input ref={ogRef} type="file" accept="image/*" style={{display:"none"}} onChange={(e)=>uploadOg(e.target.files[0])} />
+              <button onClick={()=>ogRef.current?.click()} className="btn btn-secondary btn-sm" style={{ whiteSpace: "nowrap" }}>Upload</button>
             </div>
           </div>
         </div>
         <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 8, padding: 14, marginTop: 16 }}>
           <span style={{ ...label, marginBottom: 8, display: "block" }}>Google Preview</span>
           <div style={{ fontFamily: "var(--font-body)" }}>
-            <div style={{ fontSize: "0.9rem", color: "var(--accent-info)", fontWeight: 500 }}>BookMosaic — Discover Your Next Read</div>
+            <div style={{ fontSize: "0.9rem", color: "var(--accent-info)", fontWeight: 500 }}>{form.seoTitle || "BookMosaic — Discover Your Next Read"}</div>
             <div style={{ fontSize: "0.72rem", color: "var(--accent-sage)", margin: "2px 0" }}>https://yourdomain.com</div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Meta description will appear here once configured above.</div>
+            <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{form.metaDescription || "Meta description will appear here once configured above."}</div>
           </div>
         </div>
-        <div style={{ marginTop: 16 }}><button className="btn btn-primary btn-sm">Save Metadata</button></div>
+        <div style={{ marginTop: 16 }}><button onClick={save} className="btn btn-primary btn-sm">Save Metadata</button></div>
       </div>
     </>
   );
 }
 
 function UserAnalyticsSection() {
+  const [live, setLive] = useState(null);
+  useEffect(() => {
+    api.get("/cms/analytics/users").then(({ data }) => setLive(data?.data ?? data)).catch(()=>setLive(null));
+  }, []);
+  const topBuyers = live ? (live.topBuyers || []) : TOP_BUYERS;
+  const rev = live ? (live.clvDistribution || []) : REV_BY_USER;
+  const refunds = live ? (live.recentRefunds || []) : REFUND_HISTORY;
+  const hasLive = live !== null;
+  const kpis = live?.kpis || {};
+  const totalUsers = kpis.totalUsers ?? "646";
+  const activeUsers = kpis.activeUsers ?? "418";
   return (
     <>
       <SectionTitle>User-Centric Analytics</SectionTitle>
       <KpiRow items={[
-        { label: "Total Users",    value: "646",    icon: Users,      color: "var(--accent-sage)",  sub: "+28 this week" },
-        { label: "Active (30d)",   value: "418",    icon: UserCheck,  color: "var(--accent-info)",  sub: "64.7% retention" },
+        { label: "Total Users",    value: String(totalUsers),    icon: Users,      color: "var(--accent-sage)",  sub: hasLive ? "live" : "+28 this week" },
+        { label: "Active (30d)",   value: String(activeUsers),    icon: UserCheck,  color: "var(--accent-info)",  sub: hasLive ? "live" : "64.7% retention" },
         { label: "Avg CLV",        value: "₹2,840", icon: DollarSign, color: "var(--accent-gold, #F59E0B)", sub: "Customer lifetime" },
         { label: "Purchase Freq",  value: "2.8×",   icon: Repeat,     color: "var(--accent-amber)", sub: "Orders/user avg" },
       ]} />
       <div style={card}>
-        <p style={{ ...label, marginBottom: 14 }}>Top Buyers — Customer Lifetime Value</p>
+        <p style={{ ...label, marginBottom: 14 }}>Top Buyers — Customer Lifetime Value {hasLive ? "· live" : "(demo)"}</p>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr>{["Customer","Email","Orders","CLV","Avg Order","Last Order"].map((h) => <th key={h} style={tableHeader}>{h}</th>)}</tr></thead>
           <tbody>
-            {TOP_BUYERS.map((b) => (
+            {topBuyers.map((b) => (
               <tr key={b.user}>
                 <td style={tableCell}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -161,9 +229,9 @@ function UserAnalyticsSection() {
         </table>
       </div>
       <div style={card}>
-        <p style={{ ...label, marginBottom: 14 }}>Revenue Distribution by User Tier</p>
+        <p style={{ ...label, marginBottom: 14 }}>Revenue Distribution by User Tier {hasLive ? "· live" : ""}</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {REV_BY_USER.map(({ label: lbl, count, pct }) => (
+          {rev.map(({ label: lbl, count, pct }) => (
             <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", width: 70, flexShrink: 0 }}>{lbl}</span>
               <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg-surface)", overflow: "hidden" }}>
@@ -175,11 +243,11 @@ function UserAnalyticsSection() {
         </div>
       </div>
       <div style={card}>
-        <p style={{ ...label, marginBottom: 14 }}>Refund History</p>
+        <p style={{ ...label, marginBottom: 14 }}>Refund History {hasLive ? "· live" : "(demo)"} {hasLive && refunds.length===0 ? "(no refunds yet)" : ""}</p>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr>{["Refund ID","Customer","Book","Amount","Status","Date"].map((h) => <th key={h} style={tableHeader}>{h}</th>)}</tr></thead>
           <tbody>
-            {REFUND_HISTORY.map((r) => (
+            {refunds.map((r) => (
               <tr key={r.id}>
                 <td style={{ ...tableCell, fontFamily: "monospace", fontSize: "0.72rem", color: "var(--text-faint)" }}>{r.id}</td>
                 <td style={tableCell}>{r.user}</td>
@@ -197,30 +265,36 @@ function UserAnalyticsSection() {
 }
 
 function BookAnalyticsSection() {
+  const [books, setBooks] = useState(null);
+  useEffect(() => {
+    api.get("/cms/analytics/books").then(({ data }) => setBooks(data?.data ?? data)).catch(()=>setBooks([]));
+  }, []);
+  const hasLive = books !== null;
+  const rows = hasLive && books.length ? books : (hasLive ? [] : [
+    { title: "Atomic Habits",        author: "James Clear",   views: 2987, purchases: 341 },
+    { title: "The Midnight Library", author: "Matt Haig",     views: 3214, purchases: 218 },
+    { title: "Sapiens",              author: "Yuval Harari",  views: 1998, purchases: 162 },
+    { title: "The Alchemist",        author: "Paulo Coelho",  views: 2310, purchases: 276 },
+    { title: "Project Hail Mary",    author: "Andy Weir",     views: 2654, purchases: 195 },
+  ]);
   return (
     <>
       <SectionTitle>Book Analytics</SectionTitle>
       <div style={card}>
-        <p style={{ ...label, marginBottom: 14 }}>Top Performing Books</p>
+        <p style={{ ...label, marginBottom: 14 }}>Top Performing Books {books ? "" : "(demo)"}</p>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr>{["#","Title","Author","Views","Purchases","Conv."].map((h) => <th key={h} style={tableHeader}>{h}</th>)}</tr></thead>
           <tbody>
-            {[
-              { title: "Atomic Habits",        author: "James Clear",   views: 2987, purchases: 341 },
-              { title: "The Midnight Library", author: "Matt Haig",     views: 3214, purchases: 218 },
-              { title: "Sapiens",              author: "Yuval Harari",  views: 1998, purchases: 162 },
-              { title: "The Alchemist",        author: "Paulo Coelho",  views: 2310, purchases: 276 },
-              { title: "Project Hail Mary",    author: "Andy Weir",     views: 2654, purchases: 195 },
-            ].map((b, i) => (
+            {rows.map((b, i) => (
               <tr key={b.title}>
                 <td style={{ ...tableCell, color: "var(--text-faint)", width: 28 }}>{i + 1}</td>
                 <td style={{ ...tableCell, fontStyle: "italic", color: "var(--text-primary)", fontWeight: 500 }}>{b.title}</td>
                 <td style={tableCell}>{b.author}</td>
-                <td style={{ ...tableCell, fontWeight: 500 }}>{b.views.toLocaleString()}</td>
+                <td style={{ ...tableCell, fontWeight: 500 }}>{Number(b.views||0).toLocaleString()}</td>
                 <td style={tableCell}>
                   <span style={{ padding: "2px 8px", borderRadius: 4, background: "var(--accent-sage-bg)", color: "var(--accent-sage-text)", fontSize: "0.72rem", fontWeight: 600, border: "1px solid rgba(92,122,94,0.2)" }}>{b.purchases}</span>
                 </td>
-                <td style={{ ...tableCell, fontSize: "0.72rem", color: "var(--text-muted)" }}>{((b.purchases / b.views) * 100).toFixed(1)}%</td>
+                <td style={{ ...tableCell, fontSize: "0.72rem", color: "var(--text-muted)" }}>{b.views ? ((b.purchases / b.views) * 100).toFixed(1) : "0.0"}%</td>
               </tr>
             ))}
           </tbody>
@@ -232,6 +306,15 @@ function BookAnalyticsSection() {
 
 function EventTrackingSection() {
   const [activeFilter, setActiveFilter] = useState("all");
+  const [liveEvents, setLiveEvents] = useState(null);
+  useEffect(() => {
+    api.get("/cms/events", { params: { limit: 20 } }).then(({ data }) => {
+      const list = data?.data ?? data;
+      if (Array.isArray(list) && list.length) {
+        setLiveEvents(list.map(e=>({ id:e._id||e.id, type:e.type||"login", user:e.user||"user", meta:e.meta||"", time:e.createdAt?new Date(e.createdAt).toLocaleTimeString(): "", ip:e.ip||"" })));
+      }
+    }).catch(()=>{});
+  }, []);
 
   const eventColor = (type) => EVENT_TYPES.find((e) => e.id === type)?.color || "var(--text-faint)";
   const eventIcon = (type) => EVENT_TYPES.find((e) => e.id === type)?.icon || Activity;
@@ -244,7 +327,8 @@ function EventTrackingSection() {
     { id: "search", label: "Search" },
   ];
 
-  const filtered = activeFilter === "all" ? MOCK_EVENTS : MOCK_EVENTS.filter((e) =>
+  const source = liveEvents || MOCK_EVENTS;
+  const filtered = activeFilter === "all" ? source : source.filter((e) =>
     e.type === activeFilter || e.type.startsWith(activeFilter)
   );
 
@@ -336,26 +420,39 @@ function EventTrackingSection() {
 }
 
 function AuditLogsSection() {
+  const toast = useToast();
   const severityColor = (s) => ({ info: "var(--accent-info)", warn: "var(--accent-amber-dark)", danger: "var(--accent-danger)" }[s] || "var(--text-faint)");
   const severityBg = (s) => ({ info: "rgba(59,130,246,0.08)", warn: "rgba(139,111,71,0.1)", danger: "rgba(184,84,80,0.1)" }[s] || "var(--bg-surface)");
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api.get("/cms/audit-logs", { params: { limit: 50 } }).then(({ data }) => setLogs(data?.logs ?? data?.data ?? [])).catch(() => setLogs(MOCK_AUDIT)).finally(()=>setLoading(false));
+  }, []);
+  const exportCsv = () => {
+    api.get("/cms/audit-logs/export", { responseType: "blob" }).then(({ data }) => {
+      const url = URL.createObjectURL(new Blob([data]));
+      const a = document.createElement("a"); a.href = url; a.download = "audit-logs.csv"; a.click(); URL.revokeObjectURL(url);
+      toast("CSV exported", "success");
+    }).catch(()=>toast("Export failed","error"));
+  };
   return (
     <>
       <SectionTitle>Audit Logs</SectionTitle>
       <div style={card}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <p style={{ fontSize: "0.83rem", color: "var(--text-muted)" }}>All admin and system actions are immutable</p>
-          <button className="btn btn-secondary btn-sm">Export CSV</button>
+          <p style={{ fontSize: "0.83rem", color: "var(--text-muted)" }}>All admin and system actions are immutable {loading ? "(loading…)" : `(${logs.length})`}</p>
+          <button onClick={exportCsv} className="btn btn-secondary btn-sm">Export CSV</button>
         </div>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr>{["Actor","Action","Target","Time","IP","Severity"].map((h) => <th key={h} style={tableHeader}>{h}</th>)}</tr></thead>
           <tbody>
-            {MOCK_AUDIT.map((a) => (
-              <tr key={a.id}>
-                <td style={{ ...tableCell, fontWeight: 500, color: "var(--text-primary)" }}>{a.actor}</td>
+            {logs.map((a) => (
+              <tr key={a._id || a.id}>
+                <td style={{ ...tableCell, fontWeight: 500, color: "var(--text-primary)" }}>{a.actor ? String(a.actor).slice(-6) : a.actor || "system"}</td>
                 <td style={tableCell}><span style={{ fontFamily: "monospace", fontSize: "0.72rem", padding: "2px 6px", borderRadius: 3, background: severityBg(a.severity), color: severityColor(a.severity), border: `1px solid ${severityColor(a.severity)}30` }}>{a.action}</span></td>
                 <td style={{ ...tableCell, color: "var(--text-muted)", fontSize: "0.75rem" }}>{a.target}</td>
-                <td style={{ ...tableCell, color: "var(--text-faint)", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{a.time}</td>
-                <td style={{ ...tableCell, fontFamily: "monospace", fontSize: "0.68rem", color: "var(--text-faint)" }}>{a.ip}</td>
+                <td style={{ ...tableCell, color: "var(--text-faint)", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{a.createdAt ? new Date(a.createdAt).toLocaleString() : a.time}</td>
+                <td style={{ ...tableCell, fontFamily: "monospace", fontSize: "0.68rem", color: "var(--text-faint)" }}>{a.ip || "—"}</td>
                 <td style={tableCell}><StatusBadge status={a.severity === "danger" ? "rejected" : a.severity === "warn" ? "pending" : "active"} /></td>
               </tr>
             ))}
@@ -367,8 +464,20 @@ function AuditLogsSection() {
 }
 
 function FeaturesSection() {
+  const toast = useToast();
   const [features, setFeatures] = useState(FEATURE_DEFAULTS);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api.get("/cms/features").then(({ data }) => {
+      const v = data?.data ?? data;
+      if (v && typeof v === "object") setFeatures((f) => ({ ...f, ...v }));
+    }).catch(()=>{}).finally(()=>setLoading(false));
+  }, []);
   const toggle = (key) => setFeatures((f) => ({ ...f, [key]: !f[key] }));
+  const save = async () => {
+    try { await api.put("/cms/features", features); toast("Feature flags saved", "success"); } catch(e){ toast(e?.response?.data?.message||"Save failed","error"); }
+  };
+  if (loading) return <p style={{color:"var(--text-muted)"}}>Loading features…</p>;
   return (
     <>
       <SectionTitle>Feature Toggles</SectionTitle>
@@ -380,42 +489,56 @@ function FeaturesSection() {
                 <p style={{ fontSize: "0.83rem", fontWeight: 500, color: "var(--text-primary)" }}>{lbl}</p>
                 <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>{features[key] ? "Enabled — visible to users" : "Disabled — hidden from users"}</p>
               </div>
-              <Toggle on={features[key]} onToggle={() => toggle(key)} />
+              <Toggle on={!!features[key]} onToggle={() => toggle(key)} />
             </div>
           ))}
         </div>
-        <div style={{ marginTop: 16 }}><button className="btn btn-primary btn-sm">Save Feature Flags</button></div>
+        <div style={{ marginTop: 16 }}><button onClick={save} className="btn btn-primary btn-sm">Save Feature Flags</button></div>
       </div>
     </>
   );
 }
 
 function IntegrationsSection() {
+  const toast = useToast();
+  const FIELDS = [
+    { key: "cashfreeApiKey", lbl: "Cashfree API Key", ph: "cf_live_xxxxxxxxxxxx" },
+    { key: "smtpHost", lbl: "SMTP Host", ph: "smtp.gmail.com" },
+    { key: "cloudinaryCloudName", lbl: "Cloudinary Cloud Name", ph: "your-cloud-name" },
+    { key: "googleAnalyticsId", lbl: "Google Analytics ID", ph: "G-XXXXXXXXXX" },
+    { key: "cdnBaseUrl", lbl: "CDN Base URL", ph: "https://cdn.yourdomain.com" },
+  ];
+  const [form, setForm] = useState({ cashfreeApiKey:"", smtpHost:"", cloudinaryCloudName:"", googleAnalyticsId:"", cdnBaseUrl:"" });
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api.get("/cms/integrations").then(({ data }) => {
+      const v = data?.data?.value ?? data?.data ?? data;
+      if (v) setForm((f)=>({ ...f, ...v }));
+    }).catch(()=>{}).finally(()=>setLoading(false));
+  }, []);
+  const save = async () => {
+    try { await api.put("/cms/integrations", form); toast("Integrations saved (stored securely)", "success"); } catch(e){ toast(e?.response?.data?.message||"Save failed","error"); }
+  };
+  if (loading) return <p style={{color:"var(--text-muted)"}}>Loading integrations…</p>;
   return (
     <>
       <SectionTitle>Integrations</SectionTitle>
       <div style={card}>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {[
-            { lbl: "Cashfree API Key",      ph: "cf_live_xxxxxxxxxxxx" },
-            { lbl: "SMTP Host",             ph: "smtp.gmail.com" },
-            { lbl: "Cloudinary Cloud Name", ph: "your-cloud-name" },
-            { lbl: "Google Analytics ID",   ph: "G-XXXXXXXXXX" },
-            { lbl: "CDN Base URL",          ph: "https://cdn.yourdomain.com" },
-          ].map(({ lbl: l, ph }) => (
-            <div key={l}>
-              <span style={label}>{l}</span>
-              <input type="password" style={inputSt} placeholder={ph} />
+          {FIELDS.map(({ key, lbl, ph }) => (
+            <div key={key}>
+              <span style={label}>{lbl}</span>
+              <input type="password" value={form[key]} onChange={(e)=>setForm(f=>({...f,[key]:e.target.value}))} style={inputSt} placeholder={ph} />
             </div>
           ))}
         </div>
-        <div style={{ background: "rgba(139,111,71,0.08)", border: "1px solid rgba(139,111,71,0.2)", borderRadius: 8, padding: 14, marginTop: 16, display: "flex", gap: 10, alignItems: "flex-start" }}>
-          <Shield size={14} style={{ color: "var(--accent-amber)", marginTop: 2, flexShrink: 0 }} />
-          <p style={{ fontSize: "0.75rem", color: "var(--accent-amber-dark)", lineHeight: 1.5 }}>
-            Credentials are stored as server-side environment variables. Values entered here are not persisted until the backend settings API is connected.
+        <div style={{ background: "rgba(92,122,94,0.08)", border: "1px solid rgba(92,122,94,0.2)", borderRadius: 8, padding: 14, marginTop: 16, display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <Shield size={14} style={{ color: "var(--accent-sage)", marginTop: 2, flexShrink: 0 }} />
+          <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+            Credentials are stored encrypted server-side and never exposed via public APIs. Saving here updates <code>SiteSetting/integrations</code> immediately.
           </p>
         </div>
-        <div style={{ marginTop: 16 }}><button className="btn btn-primary btn-sm">Save Integrations</button></div>
+        <div style={{ marginTop: 16 }}><button onClick={save} className="btn btn-primary btn-sm">Save Integrations</button></div>
       </div>
     </>
   );

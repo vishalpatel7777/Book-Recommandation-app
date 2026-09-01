@@ -73,6 +73,12 @@ const login = async (req, res, next) => {
     // Set JWT in HttpOnly cookie — inaccessible to JavaScript
     res.cookie("access_token", result.token, appConfig.cookie);
 
+    // Live event tracking (non-blocking)
+    try {
+      const cmsService = require("../services/cms.service");
+      cmsService.logEvent({ type: "login", userId: result.user.id, user: result.user.username, meta: `login ${result.user.username}`, ip: req.ip || req.headers["x-forwarded-for"] || "" });
+    } catch (_) {}
+
     // Return user info only (NO token in response body)
     return res.status(200).json({
       id: result.user.id,
@@ -81,6 +87,11 @@ const login = async (req, res, next) => {
       email: result.user.email,
     });
   } catch (error) {
+    // log failed login for admin insight
+    try {
+      const cmsService = require("../services/cms.service");
+      cmsService.logEvent({ type: "failed-login", user: email || "unknown", meta: email ? `failed login ${email}` : "failed login", ip: req.ip || "" });
+    } catch (_) {}
     return fail400(res, error.message);
   }
 };

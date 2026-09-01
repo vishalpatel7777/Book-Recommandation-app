@@ -26,10 +26,11 @@ dist-ssr
 .env
 .env.example
 .qodo
-docs
 jobs
 tests
 
 .claude
-extra
 graphify-out
+
+docs
+extra

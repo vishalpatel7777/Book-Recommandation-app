@@ -1,11 +1,17 @@
+import { useState, useEffect } from "react";
 import { Search, TrendingUp, AlertCircle, BarChart2 } from "lucide-react";
 import { SEARCH_TERMS, NO_RESULT_SEARCHES } from "../cmsData";
 import { st, SectionTitle, KpiRow } from "../cmsUi";
+import api from "../../../../services/axios";
 
 export default function SearchAnalyticsSection() {
-  const totalSearches = SEARCH_TERMS.reduce((s, t) => s + t.count, 0);
-  const avgSuccess = Math.round(SEARCH_TERMS.reduce((s, t) => s + t.success, 0) / SEARCH_TERMS.length);
-  const noResultCount = NO_RESULT_SEARCHES.reduce((s, t) => s + t.count, 0);
+  const [live, setLive] = useState(null);
+  useEffect(()=>{ api.get("/cms/analytics/search").then(({data})=>setLive(data?.data??data)).catch(()=>{}); },[]);
+  const terms = live ? (live.topTerms||[]) : SEARCH_TERMS;
+  const noRes = live ? (live.noResultTerms||[]) : NO_RESULT_SEARCHES;
+  const totalSearches = terms.length ? terms.reduce((s, t) => s + (t.count||0), 0) : SEARCH_TERMS.reduce((s, t) => s + t.count, 0);
+  const avgSuccess = terms.length ? Math.round(terms.reduce((s, t) => s + (t.success||0), 0) / terms.length) : Math.round(SEARCH_TERMS.reduce((s, t) => s + t.success, 0) / SEARCH_TERMS.length);
+  const noResultCount = noRes.length ? noRes.reduce((s, t) => s + (t.count||0), 0) : NO_RESULT_SEARCHES.reduce((s, t) => s + t.count, 0);
 
   return (
     <>
@@ -19,14 +25,14 @@ export default function SearchAnalyticsSection() {
       ]} />
 
       <div style={st.card}>
-        <p style={{ ...st.label, marginBottom: 14 }}>Top Search Terms</p>
+        <p style={{ ...st.label, marginBottom: 14 }}>Top Search Terms {live ? "· live" : "(demo)"}</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {SEARCH_TERMS.map(({ term, count, success }, i) => (
+          {terms.map(({ term, count, success }, i) => (
             <div key={term} style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <span style={{ fontSize: "0.65rem", color: "var(--text-faint)", width: 16, flexShrink: 0, fontFamily: "monospace", textAlign: "right" }}>{i + 1}</span>
               <span style={{ fontSize: "0.82rem", color: "var(--text-primary)", width: 180, flexShrink: 0 }}>{term}</span>
               <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg-surface)", overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${(count / SEARCH_TERMS[0].count) * 100}%`, borderRadius: 4, background: "var(--accent-sage)", transition: "width 0.6s" }} />
+                <div style={{ height: "100%", width: `${(count / (terms[0]?.count||1)) * 100}%`, borderRadius: 4, background: "var(--accent-sage)", transition: "width 0.6s" }} />
               </div>
               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", width: 40, flexShrink: 0, textAlign: "right" }}>{count}</span>
               <span style={{ fontSize: "0.68rem", padding: "1px 7px", borderRadius: 4, background: success >= 90 ? "rgba(92,122,94,0.1)" : "rgba(139,111,71,0.1)", color: success >= 90 ? "var(--accent-sage-text)" : "var(--accent-amber-dark)", width: 52, textAlign: "center", flexShrink: 0 }}>{success}%</span>
@@ -45,7 +51,7 @@ export default function SearchAnalyticsSection() {
             <tr>{["Search Term", "Count", "Last Seen", "Action"].map(h => <th key={h} style={st.th}>{h}</th>)}</tr>
           </thead>
           <tbody>
-            {NO_RESULT_SEARCHES.map(r => (
+            {noRes.map(r => (
               <tr key={r.term}>
                 <td style={{ ...st.td, fontWeight: 500, color: "var(--text-primary)" }}>{r.term}</td>
                 <td style={{ ...st.td, fontWeight: 600, color: "var(--accent-danger)" }}>{r.count}</td>

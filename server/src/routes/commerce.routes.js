@@ -11,30 +11,28 @@ const {
 } = require("../validators/commerce.validator");
 const ctrl = require("../controllers/commerce.controller");
 
-router.use(authenticateToken, isAdmin);
-
 // Payment Settings
-router.get("/admin/payment-settings",  ctrl.getPaymentSettings);
-router.put("/admin/payment-settings",  validate(updatePaymentSettingsSchema), ctrl.updatePaymentSettings);
+router.get("/admin/payment-settings",  authenticateToken, isAdmin, ctrl.getPaymentSettings);
+router.put("/admin/payment-settings",  authenticateToken, isAdmin, validate(updatePaymentSettingsSchema), ctrl.updatePaymentSettings);
 
 // Order Management
-router.get("/admin/orders",                               ctrl.getAllOrders);
-router.get("/admin/orders/:orderId",   validateParams(objectIdParamSchema), ctrl.getOrderById);
-router.put("/admin/orders/:orderId/status", validateParams(objectIdParamSchema), validate(updateOrderStatusSchema), ctrl.updateOrderStatus);
+router.get("/admin/orders",                               authenticateToken, isAdmin, ctrl.getAllOrders);
+router.get("/admin/orders/:orderId",   authenticateToken, isAdmin, validateParams(objectIdParamSchema), ctrl.getOrderById);
+router.put("/admin/orders/:orderId/status", authenticateToken, isAdmin, validateParams(objectIdParamSchema), validate(updateOrderStatusSchema), ctrl.updateOrderStatus);
 
 // Refund Management
-router.get("/admin/refunds",                                                  ctrl.getAllRefunds);
-router.put("/admin/refunds/:refundId", validateParams(objectIdParamSchema), validate(processRefundSchema), ctrl.processRefund);
+router.get("/admin/refunds",                                                  authenticateToken, isAdmin, ctrl.getAllRefunds);
+router.put("/admin/refunds/:refundId", authenticateToken, isAdmin, validateParams(objectIdParamSchema), validate(processRefundSchema), ctrl.processRefund);
 
 // Library Control
-router.get("/admin/users/:userId/library",                         validateParams(objectIdParamSchema), ctrl.getUserLibraryAdmin);
-router.post("/admin/users/:userId/library/:bookId/grant",          validateParams(objectIdParamSchema), ctrl.grantAccess);
-router.delete("/admin/users/:userId/library/:bookId/revoke",       validateParams(objectIdParamSchema), ctrl.revokeAccess);
+router.get("/admin/users/:userId/library",                         authenticateToken, isAdmin, validateParams(objectIdParamSchema), ctrl.getUserLibraryAdmin);
+router.post("/admin/users/:userId/library/:bookId/grant",          authenticateToken, isAdmin, validateParams(objectIdParamSchema), ctrl.grantAccess);
+router.delete("/admin/users/:userId/library/:bookId/revoke",       authenticateToken, isAdmin, validateParams(objectIdParamSchema), ctrl.revokeAccess);
 
 // Book Access Mode
-router.put("/admin/books/:bookId/access-mode", validateParams(objectIdParamSchema), validate(setAccessModeSchema), ctrl.setAccessMode);
+router.put("/admin/books/:bookId/access-mode", authenticateToken, isAdmin, validateParams(objectIdParamSchema), validate(setAccessModeSchema), ctrl.setAccessMode);
 
 // Commerce Analytics
-router.get("/admin/commerce-analytics", ctrl.getCommerceAnalytics);
+router.get("/admin/commerce-analytics", authenticateToken, isAdmin, ctrl.getCommerceAnalytics);
 
 module.exports = router;

@@ -23,6 +23,13 @@ const reviewSchema = new mongoose.Schema({
     trim: true, // Remove leading/trailing whitespace
     maxlength: 2000 // Optional: limit review length
   },
+  status: {
+    type: String,
+    enum: ["pending", "published", "flagged", "removed", "approved", "rejected"],
+    default: "published",
+    index: true,
+  },
+  comment: { type: String, default: "" }, // alias for review text (frontend compatibility)
 }, { timestamps: true }); // Automatically adds createdAt and updatedAt
 
 // Add a compound unique index to ensure one review per user per book

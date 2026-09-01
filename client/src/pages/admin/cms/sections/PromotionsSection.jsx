@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Eye } from "lucide-react";
 import { MOCK_PROMOTIONS } from "../cmsData";
+import api from "../../../../services/axios";
 import { st, SectionTitle, StatusBadge, Modal, ConfirmDialog, Drawer, SearchBar, EmptyState, Field, ActionBtn, Checkbox, Pagination, useToastEmitter } from "../cmsUi";
 
 const EMPTY = { name: "", type: "Banner", discount: "", cta: "Shop Now", ctaUrl: "/books", priority: 1, starts: "", ends: "", status: "draft", bannerImg: "" };
@@ -59,6 +60,7 @@ function PreviewModal({ promo, onClose }) {
 export default function PromotionsSection() {
   const toast = useToastEmitter();
   const [promos, setPromos] = useState(MOCK_PROMOTIONS);
+  useEffect(()=>{ api.get("/cms/promotions").then(({data})=>{ const list=data?.data??data; if(Array.isArray(list)&&list.length) setPromos(list.map(x=>({ ...x, id:x._id||x.id, name:x.title||x.name, type:x.type||"Banner", status:x.status||"active", starts:x.starts||"", ends:x.ends||"", discount:x.discount||"", cta:x.cta||"", ctaUrl:x.ctaLink||x.ctaUrl||"" }))); }).catch(()=>{}); },[]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState([]);
   const [modal, setModal] = useState(null); // "add"|"edit"|"preview"
@@ -71,22 +73,21 @@ export default function PromotionsSection() {
   const filtered = promos.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const openAdd = () => { setForm(EMPTY); setModal("add"); };
-  const openEdit = (p) => { setForm({ ...p }); setModal("edit"); };
+  const [editingId, setEditingId] = useState(null);
+  const openAdd = () => { setForm(EMPTY); setEditingId(null); setModal("add"); };
+  const openEdit = (p) => { setForm({ ...p }); setEditingId(p._id||p.id); setModal("edit"); };
 
-  const save = () => {
-    if (!form.name.trim()) { toast?.("Name is required", "error"); return; }
-    if (modal === "add") {
-      setPromos((prev) => [...prev, { ...form, id: `p${Date.now()}` }]);
-      toast?.("Promotion created");
-    } else {
-      setPromos((prev) => prev.map((p) => p.id === form.id ? { ...form } : p));
-      toast?.("Promotion updated");
-    }
-    setModal(null);
+  const save = async () => {
+    if (!form.title?.trim() && !form.name?.trim()) { toast?.("Name is required","error"); return; }
+    const payload={ title: form.title||form.name, description: form.description||"", badge: form.badge||"", cta: form.cta||"", ctaLink: form.ctaUrl||form.ctaLink||"", imageUrl: form.imageUrl||form.bannerImg||"", type: form.type||"Banner", status: form.status||"active", priority: Number(form.priority)||1 };
+    try{
+      if(modal==="add"){ const {data}=await api.post("/cms/promotions", payload); const saved=data?.data??data; setPromos(prev=>[...prev,{...saved, id:saved._id||saved.id, name:saved.title||saved.name, title:saved.title||saved.name}]); toast?.("Promotion created (live)"); }
+      else { const id=editingId; const {data}=await api.put(`/cms/promotions/${id}`, payload); const saved=data?.data??data; setPromos(prev=>prev.map(x=>(x._id||x.id)===id?{...x,...saved, id:saved._id||saved.id, name:saved.title||saved.name}:x)); toast?.("Promotion updated (live)"); }
+      setModal(null);
+    }catch(e){ toast?.(e?.response?.data?.message||"Save failed","error"); }
   };
 
-  const deletePromo = (p) => { setPromos((prev) => prev.filter(x => x.id !== p.id)); toast?.("Promotion deleted"); };
+  const deletePromo = async (p) => { const id=p._id||p.id; try{ await api.delete(`/cms/promotions/${id}`); setPromos(prev=>prev.filter(x=>(x._id||x.id)!==id)); toast?.("Promotion deleted (live)"); }catch{ setPromos((prev) => prev.filter(x => x.id !== p.id)); toast?.("Promotion deleted (local)"); } };
   const toggleSelect = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   const toggleAll = () => setSelected(selected.length === paginated.length ? [] : paginated.map(p => p.id));
 

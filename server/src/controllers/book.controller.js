@@ -108,6 +108,12 @@ const searchBooks = async (req, res, next) => {
     try {
         const { search } = req.query;
         const books = await bookService.searchBooks(search);
+        // fire-and-forget analytics (admin-only concern, never throws)
+        try {
+          const cmsService = require("../services/cms.service");
+          const len = Array.isArray(books) ? books.length : (books?.data?.length ?? 0);
+          if (search) cmsService.logSearch(search, req.user?.id || null, len);
+        } catch (_) {}
         return res.status(200).json({ status: "success", data: books });
     } catch (error) {
         next(error);

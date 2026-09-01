@@ -172,7 +172,7 @@ const storeReview = async (userId, bookId, rating, reviewText) => {
 };
 
 const getReviewsByBook = async (bookId) => {
-    return Review.find({ bookId }).sort({ createdAt: -1 }).lean();
+    return Review.find({ bookId, status: { $in: ["published", "approved"] } }).sort({ createdAt: -1 }).lean();
 };
 
 const getRatingByBookAndUser = async (userId, bookId) => {
@@ -188,6 +188,14 @@ const getReviewByBookAndUser = async (userId, bookId) => {
 // --- Recommendation Service ---
 
 const fetchRecommendedBooks = async (limit = RECOMMENDED_BOOKS_LIMIT) => {
+    try {
+      const siteSetting = require("./siteSetting.service");
+      const flags = await siteSetting.getFeatureFlags().catch(() => null);
+      if (flags && flags.recommendations === false) return [];
+      const rec = await siteSetting.getGroup("recommendations").catch(() => null);
+      if (rec && rec.value && rec.value.enabled === false) return [];
+      if (rec && rec.value && rec.value.topN) limit = rec.value.topN;
+    } catch (_) {}
     const ratings = await Rating.find().populate("user book");
     const validRatings = ratings.filter((r) => r.user && r.book);
 

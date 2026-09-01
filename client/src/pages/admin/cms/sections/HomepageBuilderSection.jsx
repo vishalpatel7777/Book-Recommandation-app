@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { GripVertical, Plus, Edit2, Trash2, Eye, EyeOff } from "lucide-react";
 import { st, SectionTitle, StatusBadge, Modal, ConfirmDialog, Field, ActionBtn, Toggle, useToastEmitter } from "../cmsUi";
+import api from "../../../../services/axios";
 
 const SECTION_TYPES = ["Hero Banner", "Featured Books", "Best Sellers", "Trending", "New Arrivals", "Authors", "Testimonials", "Newsletter", "Promotion Banner", "Categories"];
 
@@ -59,6 +60,7 @@ function BlockConfig({ value, onChange }) {
 export default function HomepageBuilderSection() {
   const toast = useToastEmitter();
   const [blocks, setBlocks] = useState(INITIAL_BLOCKS);
+  useEffect(()=>{ api.get("/cms/homepage-blocks").then(({data})=>{ const d=data?.data??data; const list=d?.blocks??d; if(Array.isArray(list)&&list.length) setBlocks(list.map(b=>({ ...b, id:b.blockId||b.id, type:b.type, status:b.status||"active", order:b.order })) ); }).catch(()=>{}); },[]);
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(EMPTY_BLOCK);
   const [confirm, setConfirm] = useState(null);
@@ -99,7 +101,13 @@ export default function HomepageBuilderSection() {
     dragOverId.current = null;
   };
 
-  const publish = () => toast?.("Layout published to storefront");
+  const publish = async () => {
+    try {
+      const payload = blocks.map((b, i) => ({ blockId: b.id || b.blockId, type: b.type, status: b.status, order: b.order || i + 1, headline: b.headline || "", subtext: b.subtext || "" }));
+      await api.put("/cms/homepage-blocks", { blocks: payload });
+      toast?.("Layout published to storefront (live)");
+    } catch (e) { toast?.(e?.response?.data?.message || "Publish failed", "error"); }
+  };
 
   return (
     <>
