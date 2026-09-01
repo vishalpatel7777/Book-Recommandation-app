@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Eye } from "lucide-react";
-import { MOCK_CATEGORIES } from "../cmsData";
 import { st, SectionTitle, Toggle, Modal, ConfirmDialog, Drawer, SearchBar, EmptyState, Field, ActionBtn, Checkbox, Pagination, useToastEmitter } from "../cmsUi";
 import api from "../../../../services/axios";
 
@@ -44,15 +43,14 @@ function CategoryForm({ value, onChange }) {
 
 export default function CategoriesSection() {
   const toast = useToastEmitter();
-  const [cats, setCats] = useState(MOCK_CATEGORIES);
-  const [live, setLive] = useState(false);
+  const [cats, setCats] = useState([]);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     api.get("/cms/categories").then(({ data }) => {
-      const list = data?.data ?? data;
-      if (Array.isArray(list) && list.length) {
-        setCats(list.map(c=>({ ...c, id: c._id||c.id, desc: c.description||c.desc, books: c.count ?? c.books ?? 0 }))); setLive(true);
-      }
-    }).catch(()=>{});
+      const raw = data?.data ?? data;
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+      if (Array.isArray(list)) setCats(list.map(c=>({ ...c, id: c._id||c.id, _id: c._id||c.id, desc: c.description||c.desc, books: c.count ?? c.books ?? 0 })));
+    }).catch((e)=>{ toast?.(e?.response?.data?.message||"Failed to load categories","error"); }).finally(()=>setLoading(false));
   }, []);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState([]);
@@ -63,7 +61,7 @@ export default function CategoriesSection() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 10;
 
-  const filtered = cats.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = cats.filter((c) => !search || String(c.name||"").toLowerCase().includes(search.toLowerCase()));
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const openAdd = () => { setForm(EMPTY); setModal({ mode: "add" }); };
@@ -74,18 +72,19 @@ export default function CategoriesSection() {
     if (!form.slug.trim()) { toast?.("Slug is required", "error"); return; }
     const payload = { name: form.name, slug: form.slug, description: form.desc, icon: form.icon||"", color: form.color||"", seoTitle: form.seoTitle||"", seoDesc: form.seoDesc||"", featured: !!form.featured, image: form.imageUrl||"" };
     try {
-      if (modal.mode === "add") { const { data } = await api.post("/cms/categories", payload); const saved = data?.data ?? data; setCats((prev)=>[...prev, { ...form, ...saved, id: saved._id||saved.id, desc: saved.description||form.desc }]); toast?.("Category created (live)"); }
+      if (modal.mode === "add") { const { data } = await api.post("/cms/categories", payload); const saved = data?.data ?? data; setCats((prev)=>[...prev, { ...form, ...saved, id: saved._id||saved.id, _id: saved._id||saved.id, desc: saved.description||form.desc }]); toast?.("Category created (live)"); }
       else { const id = modal.id; const { data } = await api.put(`/cms/categories/${id}`, payload); const saved = data?.data ?? data; setCats((prev)=>prev.map(c=> (c._id||c.id)===id ? { ...c, ...form, ...saved, id: saved._id||saved.id } : c)); toast?.("Category updated (live)"); }
       setModal(null);
-    } catch(e){ if(live){ toast?.(e?.response?.data?.message||"Save failed","error"); return; } if(modal.mode==="add"){ setCats((prev)=>[...prev,{...form,id:`c${Date.now()}`,books:0}]); toast?.("Category created (local)"); } else { setCats((prev)=>prev.map(c=>c.id===modal.id?{...c,...form}:c)); toast?.("Category updated (local)"); } setModal(null); }
+    } catch(e){ toast?.(e?.response?.data?.message||"Save failed","error"); }
   };
 
-  const deleteCat = async (c) => { const id=c._id||c.id; try{ await api.delete(`/cms/categories/${id}`); setCats((prev)=>prev.filter(x=>(x._id||x.id)!==id)); toast?.("Category deleted (live)"); }catch{ setCats((prev)=>prev.filter(x=>x.id!==c.id)); toast?.("Category deleted (local)"); } };
+  const deleteCat = async (c) => { const id=c._id||c.id; try{ await api.delete(`/cms/categories/${id}`); setCats((prev)=>prev.filter(x=>(x._id||x.id)!==id)); toast?.("Category deleted (live)"); }catch(e){ toast?.(e?.response?.data?.message||"Delete failed","error"); } };
   const toggleFeatured = async (id) => {
     const cat = cats.find(c=>(c._id||c.id)===id);
     const next = !cat?.featured;
+    const prev = cat?.featured;
     setCats((cs)=>cs.map(c=>(c._id||c.id)===id?{...c,featured:next}:c));
-    try { await api.put(`/cms/categories/${id}`, { featured: next }); toast?.("Featured updated"); } catch { if(!live) toast?.("Featured toggled (local)"); }
+    try { await api.put(`/cms/categories/${id}`, { featured: next }); toast?.("Featured updated (live)"); } catch(e){ setCats((cs)=>cs.map(c=>(c._id||c.id)===id?{...c,featured:prev}:c)); toast?.(e?.response?.data?.message||"Update failed","error"); }
   };
   const toggleSelect = (id) => setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
   const toggleAll = () => setSelected(selected.length === paginated.length ? [] : paginated.map((c) => c.id));
@@ -105,13 +104,13 @@ export default function CategoriesSection() {
           {selected.length > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>{selected.length} selected</span>
-              <ActionBtn variant="danger" onClick={() => { setCats(p => p.filter(c => !selected.includes(c.id))); setSelected([]); toast?.("Deleted"); }}>Delete Selected</ActionBtn>
+              <ActionBtn variant="danger" onClick={async () => { try{ await Promise.all(selected.map(id=>api.delete(`/cms/categories/${id}`))); setCats(p => p.filter(c => !selected.includes(c.id) && !selected.includes(c._id))); toast?.("Deleted (live)"); }catch(e){ toast?.(e?.response?.data?.message||"Bulk delete failed","error"); } setSelected([]); }}>Delete Selected</ActionBtn>
             </div>
           )}
         </div>
 
-        {paginated.length === 0 ? (
-          <EmptyState title="No categories found" desc="Add your first category." />
+        {loading ? <div style={{textAlign:"center",padding:"40px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading categories…</div> : paginated.length === 0 ? (
+          <EmptyState title="No categories found" desc={cats.length===0 ? "No categories in database. Add your first category." : "Try a different search."} />
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>

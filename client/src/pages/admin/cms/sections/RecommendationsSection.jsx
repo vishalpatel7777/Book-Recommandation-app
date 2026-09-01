@@ -20,21 +20,22 @@ const FUNNEL = [
 
 export default function RecommendationsSection() {
   const [live, setLive] = useState(null);
-  useEffect(()=>{ api.get("/cms/analytics/books").then(({data})=> { const list=data?.data??data; if(Array.isArray(list)&&list.length) setLive(list.map(b=>({ title:b.title, clicks: b.views||0, purchases:b.purchases||0, revenue: `₹${(b.price*(b.purchases||0)).toLocaleString()}`, ctr: b.views?`${((b.purchases/b.views)*100).toFixed(1)}%`:"0%" }))); }).catch(()=>{}); },[]);
-  const rows = live?.length ? live : TOP_RECOMMENDED;
+  const [loading, setLoading] = useState(true);
+  useEffect(()=>{ api.get("/cms/analytics/books").then(({data})=> { const raw=data?.data??data; const list=Array.isArray(raw)?raw:[]; setLive(list.map(b=>({ title:b.title, clicks: b.views||0, purchases:b.purchases||0, revenue: `₹${(b.price*(b.purchases||0)).toLocaleString()}`, ctr: b.views?`${((b.purchases/b.views)*100).toFixed(1)}%`:"0%" }))); }).catch(()=>setLive([])).finally(()=>setLoading(false)); },[]);
+  const rows = Array.isArray(live) ? live : [];
   return (
     <>
-      <SectionTitle>Recommendation Analytics {live ? "· live" : ""}</SectionTitle>
+      <SectionTitle>Recommendation Analytics {loading ? "· loading…" : rows.length ? "· live" : "· no data"}</SectionTitle>
 
       <KpiRow items={[
-        { label: "Recommendation CTR",      value: "25.9%", icon: MousePointer, color: "var(--accent-sage)",  sub: "Shown → Clicked" },
-        { label: "Rec. Purchases",          value: "606",   icon: Star,         color: "var(--accent-gold, #F59E0B)", sub: "Purchased from rec" },
-        { label: "Rec. Revenue",            value: "₹1.96L", icon: DollarSign, color: "var(--accent-info)",   sub: "Via recommendations" },
-        { label: "Avg Rec. per Session",    value: "4.2",   icon: TrendingUp,   color: "var(--accent-amber)", sub: "Books shown per user" },
+        { label: "Recommendation CTR",      value: "—", icon: MousePointer, color: "var(--accent-sage)",  sub: "TBD — needs click tracking" },
+        { label: "Rec. Purchases",          value: loading ? "…" : String(rows.reduce((s,r)=>s+(r.purchases||0),0)),   icon: Star,         color: "var(--accent-gold, #F59E0B)", sub: "Purchased" },
+        { label: "Rec. Revenue",            value: "—", icon: DollarSign, color: "var(--accent-info)",   sub: "TBD" },
+        { label: "Avg Rec. per Session",    value: "—",   icon: TrendingUp,   color: "var(--accent-amber)", sub: "TBD" },
       ]} />
 
       <div style={st.card}>
-        <p style={{ ...st.label, marginBottom: 14 }}>Conversion Funnel</p>
+        <p style={{ ...st.label, marginBottom: 14 }}>Conversion Funnel · demo</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {FUNNEL.map(({ stage, count, pct }, i) => (
             <div key={stage}>
@@ -54,7 +55,8 @@ export default function RecommendationsSection() {
       </div>
 
       <div style={st.card}>
-        <p style={{ ...st.label, marginBottom: 14 }}>Top Recommended Books</p>
+        <p style={{ ...st.label, marginBottom: 14 }}>Top Recommended Books {loading ? "· loading…" : ""}</p>
+        {loading ? <div style={{textAlign:"center",padding:"20px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading…</div> : rows.length===0 ? <div style={{textAlign:"center",padding:"20px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>No recommendation data yet.</div> : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>{["Book", "Clicks", "Purchases", "Revenue", "CTR"].map(h => <th key={h} style={st.th}>{h}</th>)}</tr>
@@ -78,6 +80,7 @@ export default function RecommendationsSection() {
             ))}
           </tbody>
         </table>
+        )}
       </div>
     </>
   );

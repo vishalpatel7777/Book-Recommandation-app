@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Copy, ToggleLeft } from "lucide-react";
-import { MOCK_COUPONS } from "../cmsData";
 import api from "../../../../services/axios";
 import { st, SectionTitle, StatusBadge, Toggle, Modal, ConfirmDialog, SearchBar, EmptyState, Field, ActionBtn, Checkbox, Pagination, useToastEmitter } from "../cmsUi";
 
@@ -60,8 +59,9 @@ function CouponForm({ value, onChange }) {
 
 export default function CouponsSection() {
   const toast = useToastEmitter();
-  const [coupons, setCoupons] = useState(MOCK_COUPONS);
-  useEffect(()=>{ api.get("/cms/coupons").then(({data})=>{ const list=data?.data??data; if(Array.isArray(list)&&list.length) setCoupons(list.map(c=>({ ...c, id:c._id||c.id, code:c.code, type:c.type, value:c.value, min:c.minOrder??c.min??0, maxDiscount:c.maxDiscount??"", maxUses:c.maxUses??"", expiry:c.expiry||"", status:c.status||"active" }))); }).catch(()=>{}); },[]);
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(()=>{ api.get("/cms/coupons").then(({data})=>{ const raw=data?.data??data; const list=Array.isArray(raw)?raw:(Array.isArray(raw?.data)?raw.data:[]); if(Array.isArray(list)) setCoupons(list.map(c=>({ ...c, id:c._id||c.id, _id:c._id||c.id, code:c.code, type:c.type, value:c.value, min:c.minOrder??c.min??0, maxDiscount:c.maxDiscount??"", maxUses:c.maxUses??"", uses:c.uses??0, expiry:c.expiry||"", status:c.status||"active" })) ); }).catch((e)=>{ toast?.(e?.response?.data?.message||"Failed to load coupons","error"); }).finally(()=>setLoading(false)); },[]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState([]);
@@ -72,7 +72,8 @@ export default function CouponsSection() {
   const PER_PAGE = 10;
 
   const filtered = coupons.filter((c) => {
-    const matchSearch = c.code.toLowerCase().includes(search.toLowerCase());
+    const s=search.toLowerCase();
+    const matchSearch = !s || String(c.code||"").toLowerCase().includes(s);
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -80,10 +81,14 @@ export default function CouponsSection() {
 
   const openAdd = () => { setForm(EMPTY); setModal({ mode: "add" }); };
   const openEdit = (c) => { setForm({ ...c }); setModal({ mode: "edit", id: c.id }); };
-  const duplicate = (c) => {
-    const newC = { ...c, id: `dup${Date.now()}`, code: `${c.code}_COPY`, status: "draft", uses: 0 };
-    setCoupons((prev) => [...prev, newC]);
-    toast?.("Coupon duplicated");
+  const duplicate = async (c) => {
+    try{
+      const payload={ code: `${c.code}_COPY`, type:c.type, value:c.value, maxDiscount:c.maxDiscount||null, minOrder:c.min||0, maxUses:c.maxUses||null, perUser:c.perUser||1, categories:c.categories||[], books:c.books||[], status:"draft", expiry:c.expiry||"", startDate:c.startDate||"" };
+      const {data}=await api.post("/cms/coupons", payload);
+      const saved=data?.data??data;
+      setCoupons((prev)=>[...prev,{...saved, id:saved._id||saved.id, _id:saved._id||saved.id, code:saved.code}]);
+      toast?.("Coupon duplicated (live)");
+    }catch(e){ toast?.(e?.response?.data?.message||"Duplicate failed","error"); }
   };
 
   const save = async () => {
@@ -97,7 +102,7 @@ export default function CouponsSection() {
     }catch(e){ toast?.(e?.response?.data?.message||"Save failed","error"); }
   };
 
-  const deleteCoupon = async (c) => { const id=c._id||c.id; try{ await api.delete(`/cms/coupons/${id}`); setCoupons((prev)=>prev.filter(x=>(x._id||x.id)!==id)); toast?.("Coupon deleted (live)"); }catch{ setCoupons((prev)=>prev.filter(x=>x.id!==c.id)); toast?.("Coupon deleted (local)"); } };
+  const deleteCoupon = async (c) => { const id=c._id||c.id; try{ await api.delete(`/cms/coupons/${id}`); setCoupons((prev)=>prev.filter(x=>(x._id||x.id)!==id)); toast?.("Coupon deleted (live)"); }catch(e){ toast?.(e?.response?.data?.message||"Delete failed","error"); } };
   const toggleSelect = (id) => setSelected((s) => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   const toggleAll = () => setSelected(selected.length === paginated.length ? [] : paginated.map(c => c.id));
 
@@ -121,13 +126,13 @@ export default function CouponsSection() {
           {selected.length > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>{selected.length} selected</span>
-              <ActionBtn variant="danger" onClick={() => { setCoupons(p => p.filter(c => !selected.includes(c.id))); setSelected([]); toast?.("Deleted"); }}>Delete</ActionBtn>
+              <ActionBtn variant="danger" onClick={async () => { try{ await Promise.all(selected.map(id=>api.delete(`/cms/coupons/${id}`))); setCoupons(p => p.filter(c => !selected.includes(c.id) && !selected.includes(c._id))); toast?.("Deleted (live)"); }catch(e){ toast?.(e?.response?.data?.message||"Bulk delete failed","error"); } setSelected([]); }}>Delete</ActionBtn>
             </div>
           )}
         </div>
 
-        {paginated.length === 0 ? (
-          <EmptyState title="No coupons found" desc="Create a discount code to get started." />
+        {loading ? <div style={{textAlign:"center",padding:"40px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading coupons…</div> : paginated.length === 0 ? (
+          <EmptyState title="No coupons found" desc={coupons.length===0 ? "No coupons in database. Create a discount code to get started." : "Try a different filter."} />
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>

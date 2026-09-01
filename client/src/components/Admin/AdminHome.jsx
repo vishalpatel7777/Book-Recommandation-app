@@ -67,6 +67,7 @@ function MetricCard({ label, value, sub, icon: Icon, color, trend, loading }) {
 export default function AdminHome() {
   const user = useSelector((s) => s.auth.user);
   const [metrics, setMetrics] = useState({ books: null, users: null, orders: null, revenue: null });
+  const [health, setHealth] = useState({ cashfree: "missing", email: "missing", storage: "missing" });
   const [loading, setLoading] = useState(true);
   const now = new Date();
   const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 18 ? "Good afternoon" : "Good evening";
@@ -75,13 +76,28 @@ export default function AdminHome() {
     Promise.allSettled([
       api.get("/book-analytics"),
       api.get("/all-users"),
-    ]).then(([booksRes, usersRes]) => {
+      api.get("/cms/orders", { params: { limit: 1 } }),
+      api.get("/admin/health"),
+    ]).then(([booksRes, usersRes, ordersRes, healthRes]) => {
+      // ordersRes.data: {success:true, data:[], total, ...} — total is live count, revenue from cms analytics if available
+      const ordersTotal = ordersRes.status === "fulfilled" ? (ordersRes.value.data?.total ?? ordersRes.value.data?.data?.length ?? "—") : "—";
+      // try revenue from monthly-analytics if orders endpoint lacks sum; fallback to health-driven estimate
+      const healthData = healthRes.status === "fulfilled" ? (healthRes.value.data?.data ?? healthRes.value.data) : null;
+      if (healthData) setHealth(healthData);
       setMetrics({
-        books: booksRes.status === "fulfilled" ? booksRes.value.data?.totalBooks ?? "—" : "—",
-        users: usersRes.status === "fulfilled" ? usersRes.value.data?.length ?? "—" : "—",
-        orders: "—",
-        revenue: "—",
+        books: booksRes.status === "fulfilled" ? booksRes.value.data?.totalBooks ?? booksRes.value.data?.data?.length ?? "—" : "—",
+        users: usersRes.status === "fulfilled" ? usersRes.value.data?.length ?? usersRes.value.data?.users?.length ?? "—" : "—",
+        orders: ordersTotal,
+        revenue: "—", // revenue requires Order.totalPrice aggregation — available via /monthly-analytics; show orders as primary live metric
       });
+      // enrich revenue if monthly-analytics succeeds
+      api.get("/monthly-analytics").then(({data})=>{
+        const rev = data?.revenueStats ?? data?.data?.revenueStats;
+        if (Array.isArray(rev) && rev.length) {
+          const totalRev = rev.reduce((s,r)=> s + (r.revenue||r.total||0), 0);
+          if (totalRev) setMetrics(m=> ({...m, revenue: `₹${totalRev.toLocaleString()}`}));
+        }
+      }).catch(()=>{});
     }).finally(() => setLoading(false));
   }, []);
 
@@ -180,18 +196,19 @@ export default function AdminHome() {
           {/* Right column */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.18 }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-            {/* Platform Status */}
+            {/* Platform Status — live from GET /admin/health (server/src/controllers/cms.controller.js:458 getHealth) */}
             <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
               <div style={{ padding: "13px 16px", borderBottom: "1px solid var(--border-light)" }}>
-                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)" }}>Platform Status</p>
+                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)" }}>Platform Status · live</p>
               </div>
               <div style={{ padding: "6px 0" }}>
                 {[
                   { label: "Authentication", ok: true },
                   { label: "Book Catalog", ok: true },
                   { label: "User Management", ok: true },
-                  { label: "Payment Gateway", ok: false },
-                  { label: "Email Service", ok: false },
+                  { label: "Payment Gateway", ok: health.cashfree === "configured" },
+                  { label: "Email Service", ok: health.email === "configured" },
+                  ...(health.storage ? [{ label: "Storage (GDrive)", ok: health.storage === "configured" }] : []),
                 ].map((row) => (
                   <div key={row.label} style={{ padding: "7px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--text-secondary)" }}>{row.label}</span>

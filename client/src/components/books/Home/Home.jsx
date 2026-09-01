@@ -10,11 +10,9 @@ import { fetchRecentBooks } from "../../../services/book.service";
 import api from "../../../services/axios";
 import BookCard from "../Card/BookCard";
 import {
-  CMS_HOMEPAGE_BLOCKS, CMS_PROMOTIONS, CMS_FEATURED_AUTHORS,
-  CMS_FEATURED_CATEGORIES, CMS_SOCIAL_PROOF,
+  CMS_SOCIAL_PROOF,
 } from "../../../store/cmsStore";
-import { MOCK_AUTHORS, MOCK_CATEGORIES } from "../../../pages/admin/cms/cmsData";
-import { useHomepageBlocksLive, usePromotionsLive, useAuthorsLive, useCategoriesLive, useFeatureFlagsLive } from "../../../hooks/useCmsLive";
+import { useHomepageBlocksLive, usePromotionsLive, useAuthorsLive, useCategoriesLive, useFeatureFlagsLive, useSocialProofLive } from "../../../hooks/useCmsLive";
 
 const GENRE_ICONS = {
   Fiction: "✦", Science: "◎", History: "◈", Romance: "❧",
@@ -475,8 +473,9 @@ function Home() {
   const liveAuthors = useAuthorsLive();
   const liveCategories = useCategoriesLive();
   const featureFlags = useFeatureFlagsLive();
-  const activePromo = (livePromos.length ? livePromos : CMS_PROMOTIONS).find((p) => (p.type || p.badge) === "Banner" || p.type === "Banner");
-  const blocks = (liveBlocks?.length ? liveBlocks : CMS_HOMEPAGE_BLOCKS).filter((b) => b.status === "active").sort((a, b) => a.order - b.order);
+  const socialProofLive = useSocialProofLive();
+  const activePromo = livePromos.find((p) => (p.type || p.badge) === "Banner" || p.type === "Banner");
+  const blocks = (Array.isArray(liveBlocks) ? liveBlocks : []).filter((b) => b.status === "active").sort((a, b) => a.order - b.order);
   const isLoggedIn = useSelector((s) => s.auth?.isLoggedIn || false);
 
   useEffect(() => {
@@ -489,22 +488,15 @@ function Home() {
     }
   }, [isLoggedIn]);
 
-  const rawCats = liveCategories.length ? liveCategories : CMS_FEATURED_CATEGORIES;
+  const rawCats = liveCategories;
   const liveCatsNorm = rawCats.map(c=>({ id:c._id||c.id||c.name, name:c.name, books:c.count??c.books??0 }));
-  const rawAuthors = liveAuthors.length ? liveAuthors : CMS_FEATURED_AUTHORS;
+  const rawAuthors = liveAuthors;
   const liveAuthorsNorm = rawAuthors.filter(a=>a.featured!==false).map(a=>({ ...a, id:a._id||a.id, followers:a.followers??0, verified:!!a.verified }));
   const sectionData = {
     recentBooks,
     recommendedBooks: featureFlags && featureFlags.recommendations===false ? [] : recommendedBooks,
     navigate,
-    categories: liveCatsNorm.length ? liveCatsNorm : [
-      { id: "c1", name: "Fiction", books: 142 },
-      { id: "c2", name: "Science", books: 64 },
-      { id: "c3", name: "History", books: 51 },
-      { id: "c4", name: "Romance", books: 38 },
-      { id: "c5", name: "Mystery", books: 29 },
-      { id: "c6", name: "Biography", books: 51 },
-    ],
+    categories: liveCatsNorm,
     authors: liveAuthorsNorm,
   };
 
@@ -568,7 +560,7 @@ function Home() {
                 )}
               </div>
 
-              <SocialProof stats={CMS_SOCIAL_PROOF} />
+              <SocialProof stats={socialProofLive || CMS_SOCIAL_PROOF} />
             </motion.div>
 
             <motion.div

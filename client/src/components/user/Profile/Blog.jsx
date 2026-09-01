@@ -3,8 +3,11 @@ import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BookOpen, Search, X, Clock, ChevronRight, ChevronLeft } from "lucide-react";
 import { CMS_BLOG_POSTS } from "../../../store/cmsStore";
+import { useBlogLive } from "../../../hooks/useCmsLive";
 
-const CATEGORIES = ["All", ...new Set(CMS_BLOG_POSTS.map((p) => p.category))];
+const STATIC_POSTS = CMS_BLOG_POSTS;
+const CATEGORIES = ["All", ...new Set(STATIC_POSTS.map((p) => p.category))];
+const CATEGORIES_STATIC = CATEGORIES;
 
 const CATEGORY_COLORS = {
   Technology: { bg: "var(--accent-info)", light: "rgba(74,144,164,0.1)" },
@@ -160,7 +163,8 @@ const PostDetail = ({ post, onBack }) => (
   </motion.div>
 );
 
-const BlogContent = ({ selectedPost, setSelectedPost, search, setSearch, category, setCategory, filtered, featured, rest }) => {
+const BlogContent = ({ selectedPost, setSelectedPost, search, setSearch, category, setCategory, filtered, featured, rest, categories }) => {
+  const cats = categories || CATEGORIES;
   if (selectedPost) {
     return <PostDetail post={selectedPost} onBack={() => setSelectedPost(null)} />;
   }
@@ -186,7 +190,7 @@ const BlogContent = ({ selectedPost, setSelectedPost, search, setSearch, categor
           )}
         </div>
         <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
-          {CATEGORIES.map((c) => (
+          {cats.map((c) => (
             <button key={c} onClick={() => setCategory(c)}
               style={{ padding: "4px 14px", borderRadius: "var(--radius-full)", border: `1px solid ${category === c ? "var(--accent-sage)" : "var(--border)"}`, background: category === c ? "var(--accent-sage-bg)" : "transparent", color: category === c ? "var(--accent-sage-text)" : "var(--text-secondary)", fontSize: "var(--text-xs)", fontWeight: category === c ? 600 : 400, cursor: "pointer", transition: "all 0.12s", fontFamily: "var(--font-body)" }}
             >
@@ -252,17 +256,20 @@ const Blog = () => {
   const [selectedPost, setSelectedPost] = useState(null);
   const location = useLocation();
   const isStandalone = location.pathname === "/blog";
+  const { posts: livePosts, loading } = useBlogLive();
+  const posts = livePosts ?? STATIC_POSTS;
+  const liveCategories = livePosts ? ["All", ...new Set(posts.map((p) => p.category))] : CATEGORIES;
 
-  const filtered = CMS_BLOG_POSTS.filter((p) => {
+  const filtered = posts.filter((p) => {
     if (category !== "All" && p.category !== category) return false;
-    if (search && !p.title.toLowerCase().includes(search.toLowerCase()) && !p.summary.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !String(p.title||"").toLowerCase().includes(search.toLowerCase()) && !String(p.summary||"").toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
   const featured = filtered.filter((p) => p.featured);
   const rest = filtered.filter((p) => !p.featured);
 
-  const sharedProps = { selectedPost, setSelectedPost, search, setSearch, category, setCategory, filtered, featured, rest };
+  const sharedProps = { selectedPost, setSelectedPost, search, setSearch, category, setCategory, filtered, featured, rest, categories: liveCategories };
 
   if (isStandalone) {
     return (
@@ -270,11 +277,11 @@ const Blog = () => {
         <section className="page-header">
           <div className="page-container">
             <h1>Blog</h1>
-            <p>Reading guides, author spotlights, and curated lists.</p>
+            <p>Reading guides, author spotlights, and curated lists. {!livePosts && !loading ? "· sample posts" : livePosts ? "· live" : ""}</p>
           </div>
         </section>
         <div className="page-container" style={{ paddingTop: "var(--space-8)", paddingBottom: "var(--space-16)" }}>
-          <BlogContent {...sharedProps} />
+          {loading ? <div style={{textAlign:"center",padding:"40px 0",color:"var(--text-muted)"}}>Loading posts…</div> : <BlogContent {...sharedProps} />}
         </div>
       </div>
     );

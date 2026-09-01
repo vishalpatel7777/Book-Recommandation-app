@@ -10,7 +10,24 @@ const addPurchaseAndOrder = async (req, res, next) => {
             return res.status(400).json({ error: "Missing required fields: book, paymentMethod" });
         }
 
-        const { purchase, order } = await orderService.recordPurchaseAndCreateOrder(userId, book, paymentMethod);
+        // Support both single book and cart array (multi-buy)
+        const bookIds = Array.isArray(book) ? book : [book];
+        if (bookIds.length === 0) {
+            return res.status(400).json({ error: "No books provided" });
+        }
+
+        // Multi-book cart order
+        if (bookIds.length > 1) {
+            const result = await orderService.recordCartPurchase(userId, bookIds, paymentMethod);
+            return res.status(201).json({
+                message: "Cart purchase recorded successfully",
+                orderId: result.order._id,
+                order: result.order,
+                purchases: result.purchases,
+            });
+        }
+
+        const { purchase, order } = await orderService.recordPurchaseAndCreateOrder(userId, bookIds[0], paymentMethod);
 
         res.status(201).json({
             message: "Purchase and Order recorded successfully",

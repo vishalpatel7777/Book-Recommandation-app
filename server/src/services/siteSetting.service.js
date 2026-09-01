@@ -9,6 +9,10 @@ const DEFAULTS = {
   notifications: { settings: [] },
   payments: null, // handled by PaymentSettings model
   recommendations: { enabled: true, algorithm: "avgRating", topN: 4 },
+  // next: editorial CMS groups — stored via generic /cms/settings/:group, public via /blog /faq /social-proof
+  blog: { posts: [] }, // {posts:[{id,title,slug,date,category,readTime,featured,summary,content}]}
+  faq: { items: [] }, // {items:[{id,category,question,answer}]}
+  socialProof: { titles: "10K+", avgRating: "4.8", readers: "50K+" },
 };
 
 async function getGroup(group) {

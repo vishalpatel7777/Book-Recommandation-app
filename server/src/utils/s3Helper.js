@@ -14,7 +14,7 @@ try {
     drive = google.drive({ version: "v3", auth });
   }
 } catch (e) {
-  console.warn("[s3Helper] GOOGLE_CREDENTIALS parse failed — Drive uploads will fallback to local:", e.message);
+  require("../config/logger").warn("s3Helper GOOGLE_CREDENTIALS parse failed — fallback to local", { error: e.message });
 }
 
 // Function to upload file to Google Drive — falls back to local URL if Drive not configured
@@ -41,7 +41,7 @@ const uploadToGoogleDrive = async (filePath, fileName) => {
 const cleanupLocalFile = (filePath) => {
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
-    console.log(`Cleanup: Deleted temporary file at ${filePath}`);
+    require("../config/logger").info("Cleanup deleted temp file", { filePath });
   }
 };
 

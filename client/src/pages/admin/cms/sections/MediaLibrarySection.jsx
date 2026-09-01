@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { FolderOpen, Upload, Eye, Pencil, Copy, Download, Trash2, X } from "lucide-react";
-import { MOCK_MEDIA } from "../cmsData";
 import api from "../../../../services/axios";
 import { st, SectionTitle, ConfirmDialog, Drawer, SearchBar, EmptyState, ActionBtn, useToastEmitter } from "../cmsUi";
 
@@ -8,8 +7,9 @@ const FILTER_TYPES = ["all", "image", "banner", "logo"];
 
 export default function MediaLibrarySection() {
   const toast = useToastEmitter();
-  const [media, setMedia] = useState(MOCK_MEDIA);
-  useEffect(()=>{ api.get("/cms/media").then(({data})=>{ const list=data?.data??data; if(Array.isArray(list)&&list.length) setMedia(list.map(m=>({ ...m, id:m._id||m.id, name:m.name||m.publicId, type:m.type||"image", size:m.size||"", url:m.url||"", used:!!m.used, uploaded: m.uploadedAt ? new Date(m.uploadedAt).toLocaleDateString() : m.uploaded }))); }).catch(()=>{}); },[]);
+  const [media, setMedia] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(()=>{ api.get("/cms/media").then(({data})=>{ const raw=data?.data??data; const list=Array.isArray(raw)?raw:(Array.isArray(raw?.data)?raw.data:[]); if(Array.isArray(list)) setMedia(list.map(m=>({ ...m, id:m._id||m.id, _id:m._id||m.id, name:m.name||m.publicId, type:m.type||"image", size:m.size||"", url:m.url||"", used:!!m.used, uploaded: m.uploadedAt ? new Date(m.uploadedAt).toLocaleDateString() : (m.uploaded||"") }))); }).catch((e)=>{ toast?.(e?.response?.data?.message||"Failed to load media","error"); }).finally(()=>setLoading(false)); },[]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [usedFilter, setUsedFilter] = useState("all");
@@ -19,7 +19,7 @@ export default function MediaLibrarySection() {
   const [confirm, setConfirm] = useState(null);
 
   const filtered = media.filter(f => {
-    const ms = f.name.toLowerCase().includes(search.toLowerCase());
+    const ms = !search || String(f.name||"").toLowerCase().includes(search.toLowerCase());
     const mt = typeFilter === "all" || f.type === typeFilter;
     const mu = usedFilter === "all" || (usedFilter === "used" && f.used) || (usedFilter === "unused" && !f.used);
     return ms && mt && mu;
@@ -35,12 +35,12 @@ export default function MediaLibrarySection() {
     });
     e.target.value="";
   };
-  const deleteFile = async (f) => { const id=f._id||f.id; try{ await api.delete(`/cms/media/${id}`); setMedia(prev => prev.filter(x => (x._id||x.id) !== id)); toast?.("File deleted (live)"); }catch{ setMedia(prev => prev.filter(x => x.id !== f.id)); toast?.("File deleted (local)"); } };
+  const deleteFile = async (f) => { const id=f._id||f.id; try{ await api.delete(`/cms/media/${id}`); setMedia(prev => prev.filter(x => (x._id||x.id) !== id)); toast?.("File deleted (live)"); }catch(e){ toast?.(e?.response?.data?.message||"Delete failed","error"); } };
   const copyUrl = (f) => { navigator.clipboard?.writeText(f.url || `https://cdn.bookmosaic.com/${f.name}`).catch(() => {}); toast?.("URL copied", "info"); };
   const rename = async () => {
     if (!newName.trim()) return;
     const id=renaming._id||renaming.id;
-    try{ await api.put(`/cms/media/${id}`,{ name:newName }); setMedia(prev => prev.map(f => (f._id||f.id)===id ? { ...f, name: newName } : f)); toast?.("File renamed (live)"); }catch{ setMedia(prev => prev.map(f => f.id === renaming.id ? { ...f, name: newName } : f)); toast?.("File renamed (local)"); }
+    try{ await api.put(`/cms/media/${id}`,{ name:newName }); setMedia(prev => prev.map(f => (f._id||f.id)===id ? { ...f, name: newName } : f)); toast?.("File renamed (live)"); }catch(e){ toast?.(e?.response?.data?.message||"Rename failed","error"); }
     setRenaming(null);
     setNewName("");
   };
@@ -77,7 +77,7 @@ export default function MediaLibrarySection() {
           <span style={{ fontSize: "0.72rem", color: "var(--text-faint)" }}>{media.length} files · {totalSize} KB total</span>
         </div>
 
-        {filtered.length === 0 ? <EmptyState icon={FolderOpen} title="No files found" desc="Upload your first media file." /> : (
+        {loading ? <div style={{textAlign:"center",padding:"40px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading media…</div> : filtered.length === 0 ? <EmptyState icon={FolderOpen} title="No files found" desc={media.length===0 ? "No media in database. Upload your first file." : "Try a different filter."} /> : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
             {filtered.map(f => (
               <div key={f.id} style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}

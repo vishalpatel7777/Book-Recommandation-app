@@ -39,6 +39,17 @@ router.post("/cms/seo/og-image", authenticateToken, isAdmin, upload, cmsControll
 router.get("/cms/integrations", authenticateToken, isAdmin, (req, res, next) => { req.params.group = "integrations"; return cmsController.getSiteSetting(req, res, next); });
 router.put("/cms/integrations", authenticateToken, isAdmin, (req, res, next) => { req.params.group = "integrations"; return cmsController.updateSiteSetting(req, res, next); });
 
+// ── Blog / FAQ / SocialProof (CMS editable, public read) ─────
+router.get("/cms/blog", authenticateToken, isAdmin, (req, res, next) => { req.params.group = "blog"; return cmsController.getSiteSetting(req, res, next); });
+router.put("/cms/blog", authenticateToken, isAdmin, (req, res, next) => { req.params.group = "blog"; return cmsController.updateSiteSetting(req, res, next); });
+router.get("/cms/faq", authenticateToken, isAdmin, (req, res, next) => { req.params.group = "faq"; return cmsController.getSiteSetting(req, res, next); });
+router.put("/cms/faq", authenticateToken, isAdmin, (req, res, next) => { req.params.group = "faq"; return cmsController.updateSiteSetting(req, res, next); });
+router.get("/cms/social-proof", authenticateToken, isAdmin, (req, res, next) => { req.params.group = "socialProof"; return cmsController.getSiteSetting(req, res, next); });
+router.put("/cms/social-proof", authenticateToken, isAdmin, (req, res, next) => { req.params.group = "socialProof"; return cmsController.updateSiteSetting(req, res, next); });
+router.get("/blog", async (req, res, next) => { req.params.group = "blog"; return cmsController.getSiteSetting(req, res, next); }); // public feed — falls back to DEFAULTS.blog if empty
+router.get("/faq", async (req, res, next) => { req.params.group = "faq"; return cmsController.getSiteSetting(req, res, next); });
+router.get("/social-proof", async (req, res, next) => { req.params.group = "socialProof"; return cmsController.getSiteSetting(req, res, next); });
+
 // ── Homepage Blocks ─────────────────────────────────────────────
 router.get("/cms/homepage-blocks", authenticateToken, isAdmin, cmsController.getHomepageBlocks);
 router.put("/cms/homepage-blocks", authenticateToken, isAdmin, validate(v.homepageBlocksUpdateSchema), cmsController.putHomepageBlocks);

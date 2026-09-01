@@ -10,6 +10,7 @@ const CartBookCard = ({ data, cart }) => {
   const toast    = useToast();
   const [imgErr, setImgErr]     = useState(false);
   const [removing, setRemoving] = useState(false);
+  if (!data || !data._id) return null;
   const rating = Number(data.ratings) || 0;
   const stars  = Math.round(rating);
 

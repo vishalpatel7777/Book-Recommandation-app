@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { Search, TrendingUp, AlertCircle, BarChart2 } from "lucide-react";
-import { SEARCH_TERMS, NO_RESULT_SEARCHES } from "../cmsData";
 import { st, SectionTitle, KpiRow } from "../cmsUi";
 import api from "../../../../services/axios";
 
 export default function SearchAnalyticsSection() {
   const [live, setLive] = useState(null);
-  useEffect(()=>{ api.get("/cms/analytics/search").then(({data})=>setLive(data?.data??data)).catch(()=>{}); },[]);
-  const terms = live ? (live.topTerms||[]) : SEARCH_TERMS;
-  const noRes = live ? (live.noResultTerms||[]) : NO_RESULT_SEARCHES;
-  const totalSearches = terms.length ? terms.reduce((s, t) => s + (t.count||0), 0) : SEARCH_TERMS.reduce((s, t) => s + t.count, 0);
-  const avgSuccess = terms.length ? Math.round(terms.reduce((s, t) => s + (t.success||0), 0) / terms.length) : Math.round(SEARCH_TERMS.reduce((s, t) => s + t.success, 0) / SEARCH_TERMS.length);
-  const noResultCount = noRes.length ? noRes.reduce((s, t) => s + (t.count||0), 0) : NO_RESULT_SEARCHES.reduce((s, t) => s + t.count, 0);
+  const [loading, setLoading] = useState(true);
+  useEffect(()=>{ api.get("/cms/analytics/search").then(({data})=>setLive(data?.data??data)).catch(()=>setLive({topTerms:[],noResultTerms:[],totalSearches:0})).finally(()=>setLoading(false)); },[]);
+  const terms = live?.topTerms||[];
+  const noRes = live?.noResultTerms||[];
+  const totalSearches = live?.totalSearches ?? terms.reduce((s, t) => s + (t.count||0), 0);
+  const avgSuccess = terms.length ? Math.round(terms.reduce((s, t) => s + (t.success||0), 0) / terms.length) : 0;
+  const noResultCount = noRes.reduce((s, t) => s + (t.count||0), 0);
 
   return (
     <>
@@ -25,7 +25,8 @@ export default function SearchAnalyticsSection() {
       ]} />
 
       <div style={st.card}>
-        <p style={{ ...st.label, marginBottom: 14 }}>Top Search Terms {live ? "· live" : "(demo)"}</p>
+        <p style={{ ...st.label, marginBottom: 14 }}>Top Search Terms {loading ? "· loading…" : terms.length ? "· live" : "· no data"}</p>
+        {loading ? <div style={{textAlign:"center",padding:"20px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading search terms…</div> : terms.length===0 ? <div style={{textAlign:"center",padding:"20px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>No search data yet.</div> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {terms.map(({ term, count, success }, i) => (
             <div key={term} style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -39,13 +40,15 @@ export default function SearchAnalyticsSection() {
             </div>
           ))}
         </div>
+        )}
       </div>
 
       <div style={st.card}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <p style={st.label}>No-Result Searches — Catalogue Gaps</p>
-          <span style={{ fontSize: "0.68rem", padding: "2px 8px", borderRadius: 4, background: "rgba(184,84,80,0.08)", color: "var(--accent-danger)", border: "1px solid rgba(184,84,80,0.2)" }}>Action needed</span>
+          <span style={{ fontSize: "0.68rem", padding: "2px 8px", borderRadius: 4, background: "rgba(184,84,80,0.08)", color: "var(--accent-danger)", border: "1px solid rgba(184,84,80,0.2)" }}>{noRes.length ? "Action needed" : "No gaps"}</span>
         </div>
+        {noRes.length===0 ? <div style={{textAlign:"center",padding:"20px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>No zero-result searches.</div> : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>{["Search Term", "Count", "Last Seen", "Action"].map(h => <th key={h} style={st.th}>{h}</th>)}</tr>
@@ -65,6 +68,7 @@ export default function SearchAnalyticsSection() {
             ))}
           </tbody>
         </table>
+        )}
       </div>
     </>
   );

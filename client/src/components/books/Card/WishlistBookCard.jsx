@@ -4,6 +4,7 @@ import { Star, BookOpen } from "lucide-react";
 
 const WishlistBookCard = ({ data }) => {
   const [imgErr, setImgErr] = useState(false);
+  if (!data || !data._id) return null;
   const rating = Number(data.ratings) || 0;
   const stars  = Math.round(rating);
 

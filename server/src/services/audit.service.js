@@ -4,7 +4,8 @@ async function log({ actor = null, source = "system", action, target = "", meta 
   try {
     return await AuditLog.create({ actor, source, action, target, meta, severity, ip });
   } catch (e) {
-    console.error("[AuditLog] failed to write:", e.message);
+    const logger = require("../config/logger");
+    logger.error("AuditLog failed to write", { error: e.message, action, target });
     return null; // fire-and-forget
   }
 }

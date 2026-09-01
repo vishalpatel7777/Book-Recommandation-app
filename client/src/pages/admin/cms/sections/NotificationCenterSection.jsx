@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Copy, Send, Eye } from "lucide-react";
-import { MOCK_NOTIFICATIONS } from "../cmsData";
 import api from "../../../../services/axios";
 import { st, SectionTitle, StatusBadge, Modal, ConfirmDialog, Drawer, SearchBar, EmptyState, Field, ActionBtn, Pagination, useToastEmitter } from "../cmsUi";
 
@@ -94,22 +93,18 @@ export default function NotificationCenterSection() {
     setLoading(true);
     try {
       const { data } = await api.get("/cms/notifications", { params: { limit: 50 } });
-      const list = data?.data ?? data;
-      if (Array.isArray(list) && list.length) {
-        setNotifs(list.map(n => ({ ...n, id: n._id || n.id, sent: n.sent || 0 })));
-      } else if (Array.isArray(data?.data?.data)) {
-        setNotifs(data.data.data.map(n => ({ ...n, id: n._id || n.id, sent: n.sent || 0 })));
-      } else {
-        setNotifs(MOCK_NOTIFICATIONS);
-      }
-    } catch {
-      setNotifs(MOCK_NOTIFICATIONS);
+      const raw=data?.data??data;
+      const list=Array.isArray(raw)?raw:(Array.isArray(raw?.data)?raw.data:[]);
+      setNotifs(Array.isArray(list)?list.map(n => ({ ...n, id: n._id || n.id, _id: n._id||n.id, sent: n.sent || 0 })):[]);
+    } catch(e) {
+      toast?.(e?.response?.data?.message||"Failed to load templates","error");
+      setNotifs([]);
     } finally { setLoading(false); }
   };
 
   useEffect(() => { fetchNotifs(); }, []);
 
-  const filtered = notifs.filter(n => n.template.toLowerCase().includes(search.toLowerCase()));
+  const filtered = notifs.filter(n => !search || String(n.template||"").toLowerCase().includes(search.toLowerCase()));
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const openAdd = () => { setForm(EMPTY); setEditingId(null); setModal("add"); };
@@ -120,11 +115,10 @@ export default function NotificationCenterSection() {
     try {
       const { data } = await api.post(`/cms/notifications/${id}/duplicate`);
       const saved = data?.data ?? data;
-      setNotifs(prev => [...prev, { ...saved, id: saved._id || saved.id, sent: saved.sent || 0 }]);
+      setNotifs(prev => [...prev, { ...saved, id: saved._id || saved.id, _id: saved._id||saved.id, sent: saved.sent || 0 }]);
       toast?.("Template cloned (live)");
-    } catch {
-      setNotifs(prev => [...prev, { ...n, id: `n${Date.now()}`, template: `${n.template} (Copy)`, status: "draft", sent: 0 }]);
-      toast?.("Template cloned (local)");
+    } catch(e) {
+      toast?.(e?.response?.data?.message||"Clone failed","error");
     }
   };
   const testSend = (n) => toast?.(`Test ${n.channel} sent for "${n.template}" — check email/logs`, "info");
@@ -156,9 +150,8 @@ export default function NotificationCenterSection() {
       await api.delete(`/cms/notifications/${id}`);
       setNotifs(prev => prev.filter(x => (x._id || x.id) !== id));
       toast?.("Template deleted (live)");
-    } catch {
-      setNotifs(prev => prev.filter(x => x.id !== n.id));
-      toast?.("Template deleted (local)");
+    } catch(e) {
+      toast?.(e?.response?.data?.message||"Delete failed","error");
     }
   };
 
@@ -175,7 +168,7 @@ export default function NotificationCenterSection() {
           <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search templates…" />
         </div>
 
-        {paginated.length === 0 ? <EmptyState title="No templates" desc="Create a notification template." /> : (
+        {paginated.length === 0 ? <EmptyState title="No templates" desc={notifs.length===0 ? "No templates in database. Create a notification template." : "Try a different search."} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>{["Template", "Channel", "Trigger", "Status", "Sent", "Actions"].map(h => <th key={h} style={st.th}>{h}</th>)}</tr>

@@ -44,7 +44,8 @@ const createCashfreeOrder = async (orderData) => {
             status: "SUCCESS",
         };
     } catch (error) {
-        console.error("Cashfree Order Creation Error:", error.response?.data || error.message);
+        const logger = require("../config/logger");
+        logger.error("Cashfree order creation failed", { error: error.response?.data || error.message });
         throw new Error(error.response?.data?.message || "Failed to create payment order with Cashfree");
     }
 };
@@ -67,7 +68,8 @@ const verifyCashfreePayment = async (order_id) => {
 
         return { order_id, status: orderStatus, payments };
     } catch (error) {
-        console.error("Cashfree Verification Error:", error.response?.data || error.message);
+        const logger2 = require("../config/logger");
+        logger2.error("Cashfree verification failed", { error: error.response?.data || error.message });
         throw new Error("Failed to verify payment with Cashfree");
     }
 };

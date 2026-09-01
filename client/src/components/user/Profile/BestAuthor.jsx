@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Award, Users, BookOpen, ExternalLink, Check, AtSign, ChevronLeft, Star } from "lucide-react";
-import { CMS_AUTHORS } from "../../../store/cmsStore";
+import { useAuthorsLive } from "../../../hooks/useCmsLive";
 
 const PALETTE = [
   "var(--accent-sage)", "var(--accent-amber)", "var(--accent-info)",
@@ -228,7 +228,8 @@ const AuthorGrid = ({ authors, onSelect }) => {
 
 const BestAuthors = () => {
   const [selected, setSelected] = useState(null);
-  const authors = CMS_AUTHORS;
+  const liveAuthors = useAuthorsLive();
+  const authors = liveAuthors.map(a=>({ ...a, id: a._id||a.id, followers: a.followers??0, books: a.booksCount ?? a.books ?? 0, verified: !!a.verified }));
   const location = useLocation();
   const isStandalone = location.pathname === "/authors";
 

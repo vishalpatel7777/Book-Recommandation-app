@@ -42,8 +42,7 @@ import SchedulerSection      from "./cms/sections/SchedulerSection";
 /* ── Inline section data ── */
 import {
   PRESETS, FEATURE_DEFAULTS, FEATURE_LABELS,
-  TOP_BUYERS, REFUND_HISTORY, REV_BY_USER,
-  EVENT_TYPES, MOCK_EVENTS, EVENT_VOLUME, MOCK_AUDIT,
+  EVENT_TYPES, EVENT_VOLUME,
 } from "./cms/cmsData";
 import { st, SectionTitle, StatusBadge, Toggle, KpiRow } from "./cms/cmsUi";
 
@@ -184,27 +183,29 @@ function MetadataSection() {
 
 function UserAnalyticsSection() {
   const [live, setLive] = useState(null);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
-    api.get("/cms/analytics/users").then(({ data }) => setLive(data?.data ?? data)).catch(()=>setLive(null));
+    api.get("/cms/analytics/users").then(({ data }) => setLive(data?.data ?? data)).catch(()=>setLive(null)).finally(()=>setLoading(false));
   }, []);
-  const topBuyers = live ? (live.topBuyers || []) : TOP_BUYERS;
-  const rev = live ? (live.clvDistribution || []) : REV_BY_USER;
-  const refunds = live ? (live.recentRefunds || []) : REFUND_HISTORY;
   const hasLive = live !== null;
+  const topBuyers = hasLive ? (live.topBuyers || []) : [];
+  const rev = hasLive ? (live.clvDistribution || []) : [];
+  const refunds = hasLive ? (live.recentRefunds || []) : [];
   const kpis = live?.kpis || {};
-  const totalUsers = kpis.totalUsers ?? "646";
-  const activeUsers = kpis.activeUsers ?? "418";
+  const totalUsers = hasLive ? (kpis.totalUsers ?? 0) : 0;
+  const activeUsers = hasLive ? (kpis.activeUsers ?? 0) : 0;
   return (
     <>
       <SectionTitle>User-Centric Analytics</SectionTitle>
       <KpiRow items={[
-        { label: "Total Users",    value: String(totalUsers),    icon: Users,      color: "var(--accent-sage)",  sub: hasLive ? "live" : "+28 this week" },
-        { label: "Active (30d)",   value: String(activeUsers),    icon: UserCheck,  color: "var(--accent-info)",  sub: hasLive ? "live" : "64.7% retention" },
-        { label: "Avg CLV",        value: "₹2,840", icon: DollarSign, color: "var(--accent-gold, #F59E0B)", sub: "Customer lifetime" },
-        { label: "Purchase Freq",  value: "2.8×",   icon: Repeat,     color: "var(--accent-amber)", sub: "Orders/user avg" },
+        { label: "Total Users",    value: loading ? "…" : String(totalUsers),    icon: Users,      color: "var(--accent-sage)",  sub: hasLive ? "live" : (loading ? "loading…" : "no data") },
+        { label: "Active (30d)",   value: loading ? "…" : String(activeUsers),    icon: UserCheck,  color: "var(--accent-info)",  sub: hasLive ? "live" : (loading ? "loading…" : "no data") },
+        { label: "Avg CLV",        value: "—", icon: DollarSign, color: "var(--accent-gold, #F59E0B)", sub: "TBD — requires order aggregation" },
+        { label: "Purchase Freq",  value: "—",   icon: Repeat,     color: "var(--accent-amber)", sub: "TBD" },
       ]} />
       <div style={card}>
-        <p style={{ ...label, marginBottom: 14 }}>Top Buyers — Customer Lifetime Value {hasLive ? "· live" : "(demo)"}</p>
+        <p style={{ ...label, marginBottom: 14 }}>Top Buyers — Customer Lifetime Value {hasLive ? "· live" : (loading ? "· loading…" : "· no data")}</p>
+        {loading ? <div style={{textAlign:"center",padding:"20px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading buyers…</div> : topBuyers.length===0 ? <div style={{textAlign:"center",padding:"20px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>No purchase data yet.</div> : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr>{["Customer","Email","Orders","CLV","Avg Order","Last Order"].map((h) => <th key={h} style={tableHeader}>{h}</th>)}</tr></thead>
           <tbody>
@@ -227,9 +228,11 @@ function UserAnalyticsSection() {
             ))}
           </tbody>
         </table>
+        )}
       </div>
       <div style={card}>
-        <p style={{ ...label, marginBottom: 14 }}>Revenue Distribution by User Tier {hasLive ? "· live" : ""}</p>
+        <p style={{ ...label, marginBottom: 14 }}>Revenue Distribution by User Tier {hasLive ? "· live" : (loading ? "· loading…" : "· no data")}</p>
+        {loading ? <div style={{textAlign:"center",padding:"10px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading…</div> : rev.length===0 ? <div style={{textAlign:"center",padding:"10px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>No distribution data.</div> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {rev.map(({ label: lbl, count, pct }) => (
             <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -241,9 +244,11 @@ function UserAnalyticsSection() {
             </div>
           ))}
         </div>
+        )}
       </div>
       <div style={card}>
-        <p style={{ ...label, marginBottom: 14 }}>Refund History {hasLive ? "· live" : "(demo)"} {hasLive && refunds.length===0 ? "(no refunds yet)" : ""}</p>
+        <p style={{ ...label, marginBottom: 14 }}>Refund History {hasLive ? "· live" : (loading ? "· loading…" : "· no refunds yet")}</p>
+        {loading ? <div style={{textAlign:"center",padding:"10px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading…</div> : refunds.length===0 ? <div style={{textAlign:"center",padding:"10px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>No refunds yet.</div> : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr>{["Refund ID","Customer","Book","Amount","Status","Date"].map((h) => <th key={h} style={tableHeader}>{h}</th>)}</tr></thead>
           <tbody>
@@ -259,6 +264,7 @@ function UserAnalyticsSection() {
             ))}
           </tbody>
         </table>
+        )}
       </div>
     </>
   );
@@ -266,27 +272,22 @@ function UserAnalyticsSection() {
 
 function BookAnalyticsSection() {
   const [books, setBooks] = useState(null);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
-    api.get("/cms/analytics/books").then(({ data }) => setBooks(data?.data ?? data)).catch(()=>setBooks([]));
+    api.get("/cms/analytics/books").then(({ data }) => setBooks(data?.data ?? data)).catch(()=>setBooks([])).finally(()=>setLoading(false));
   }, []);
-  const hasLive = books !== null;
-  const rows = hasLive && books.length ? books : (hasLive ? [] : [
-    { title: "Atomic Habits",        author: "James Clear",   views: 2987, purchases: 341 },
-    { title: "The Midnight Library", author: "Matt Haig",     views: 3214, purchases: 218 },
-    { title: "Sapiens",              author: "Yuval Harari",  views: 1998, purchases: 162 },
-    { title: "The Alchemist",        author: "Paulo Coelho",  views: 2310, purchases: 276 },
-    { title: "Project Hail Mary",    author: "Andy Weir",     views: 2654, purchases: 195 },
-  ]);
+  const rows = Array.isArray(books) ? books : [];
   return (
     <>
       <SectionTitle>Book Analytics</SectionTitle>
       <div style={card}>
-        <p style={{ ...label, marginBottom: 14 }}>Top Performing Books {books ? "" : "(demo)"}</p>
+        <p style={{ ...label, marginBottom: 14 }}>Top Performing Books {loading ? "· loading…" : rows.length ? "· live" : "· no data"}</p>
+        {loading ? <div style={{textAlign:"center",padding:"30px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading books…</div> : rows.length===0 ? <div style={{textAlign:"center",padding:"30px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>No book analytics yet.</div> : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr>{["#","Title","Author","Views","Purchases","Conv."].map((h) => <th key={h} style={tableHeader}>{h}</th>)}</tr></thead>
           <tbody>
             {rows.map((b, i) => (
-              <tr key={b.title}>
+              <tr key={b.title || i}>
                 <td style={{ ...tableCell, color: "var(--text-faint)", width: 28 }}>{i + 1}</td>
                 <td style={{ ...tableCell, fontStyle: "italic", color: "var(--text-primary)", fontWeight: 500 }}>{b.title}</td>
                 <td style={tableCell}>{b.author}</td>
@@ -299,6 +300,7 @@ function BookAnalyticsSection() {
             ))}
           </tbody>
         </table>
+        )}
       </div>
     </>
   );
@@ -306,14 +308,14 @@ function BookAnalyticsSection() {
 
 function EventTrackingSection() {
   const [activeFilter, setActiveFilter] = useState("all");
-  const [liveEvents, setLiveEvents] = useState(null);
+  const [liveEvents, setLiveEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
   useEffect(() => {
     api.get("/cms/events", { params: { limit: 20 } }).then(({ data }) => {
-      const list = data?.data ?? data;
-      if (Array.isArray(list) && list.length) {
-        setLiveEvents(list.map(e=>({ id:e._id||e.id, type:e.type||"login", user:e.user||"user", meta:e.meta||"", time:e.createdAt?new Date(e.createdAt).toLocaleTimeString(): "", ip:e.ip||"" })));
-      }
-    }).catch(()=>{});
+      const raw=data?.data??data;
+      const list=Array.isArray(raw)?raw:(Array.isArray(raw?.data)?raw.data:[]);
+      setLiveEvents(Array.isArray(list)?list.map(e=>({ id:e._id||e.id, type:e.type||"login", user:e.user||"user", meta:e.meta||"", time:e.createdAt?new Date(e.createdAt).toLocaleTimeString(): "", ip:e.ip||"" })) : []);
+    }).catch(()=>{ setLiveEvents([]); }).finally(()=>setLoadingEvents(false));
   }, []);
 
   const eventColor = (type) => EVENT_TYPES.find((e) => e.id === type)?.color || "var(--text-faint)";
@@ -327,22 +329,22 @@ function EventTrackingSection() {
     { id: "search", label: "Search" },
   ];
 
-  const source = liveEvents || MOCK_EVENTS;
+  const source = liveEvents;
   const filtered = activeFilter === "all" ? source : source.filter((e) =>
-    e.type === activeFilter || e.type.startsWith(activeFilter)
+    String(e.type||"").startsWith(activeFilter)
   );
 
   return (
     <>
       <SectionTitle>Real-Time Event Tracking</SectionTitle>
       <KpiRow items={[
-        { label: "Events Today",  value: "1,842", icon: Activity,      color: "var(--accent-sage)",   sub: "+14% vs yesterday" },
-        { label: "Failed Logins", value: "7",     icon: AlertTriangle, color: "var(--accent-danger)", sub: "Last 24 hours" },
-        { label: "Conversions",   value: "12.4%", icon: CheckCircle,   color: "var(--accent-gold, #F59E0B)", sub: "View → Purchase" },
-        { label: "Search Rate",   value: "38%",   icon: SearchIcon,    color: "var(--accent-info)",   sub: "Sessions with search" },
+        { label: "Events Today",  value: loadingEvents ? "…" : String(source.length), icon: Activity,      color: "var(--accent-sage)",   sub: loadingEvents ? "loading…" : "live (last 20)" },
+        { label: "Failed Logins", value: loadingEvents ? "…" : String(source.filter(e=>String(e.type).includes("failed")).length),     icon: AlertTriangle, color: "var(--accent-danger)", sub: "live" },
+        { label: "Conversions",   value: "—", icon: CheckCircle,   color: "var(--accent-gold, #F59E0B)", sub: "TBD" },
+        { label: "Search Rate",   value: "—",   icon: SearchIcon,    color: "var(--accent-info)",   sub: "TBD" },
       ]} />
       <div style={card}>
-        <p style={{ ...label, marginBottom: 14 }}>Event Volume — Last 7 Days</p>
+        <p style={{ ...label, marginBottom: 14 }}>Event Volume — Last 7 Days · demo chart</p>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 100 }}>
           {EVENT_VOLUME.map((d) => {
             const max = 250;
@@ -390,6 +392,7 @@ function EventTrackingSection() {
             ))}
           </div>
         </div>
+        {loadingEvents ? <div style={{textAlign:"center",padding:"30px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading events…</div> : filtered.length===0 ? <div style={{textAlign:"center",padding:"30px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>No events yet. Actions will appear here.</div> : (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {filtered.map((evt, i) => {
             const Icon = eventIcon(evt.type);
@@ -414,6 +417,7 @@ function EventTrackingSection() {
             );
           })}
         </div>
+        )}
       </div>
     </>
   );
@@ -426,7 +430,7 @@ function AuditLogsSection() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    api.get("/cms/audit-logs", { params: { limit: 50 } }).then(({ data }) => setLogs(data?.logs ?? data?.data ?? [])).catch(() => setLogs(MOCK_AUDIT)).finally(()=>setLoading(false));
+    api.get("/cms/audit-logs", { params: { limit: 50 } }).then(({ data }) => setLogs(data?.logs ?? data?.data ?? [])).catch((e)=>{ toast?.(e?.response?.data?.message||"Failed to load audit logs","error"); setLogs([]); }).finally(()=>setLoading(false));
   }, []);
   const exportCsv = () => {
     api.get("/cms/audit-logs/export", { responseType: "blob" }).then(({ data }) => {
@@ -443,6 +447,7 @@ function AuditLogsSection() {
           <p style={{ fontSize: "0.83rem", color: "var(--text-muted)" }}>All admin and system actions are immutable {loading ? "(loading…)" : `(${logs.length})`}</p>
           <button onClick={exportCsv} className="btn btn-secondary btn-sm">Export CSV</button>
         </div>
+        {loading ? <div style={{textAlign:"center",padding:"30px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading logs…</div> : logs.length===0 ? <div style={{textAlign:"center",padding:"20px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>No audit logs yet.</div> : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead><tr>{["Actor","Action","Target","Time","IP","Severity"].map((h) => <th key={h} style={tableHeader}>{h}</th>)}</tr></thead>
           <tbody>
@@ -458,6 +463,7 @@ function AuditLogsSection() {
             ))}
           </tbody>
         </table>
+        )}
       </div>
     </>
   );

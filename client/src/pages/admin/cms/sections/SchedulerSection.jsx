@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Clock, Plus, Trash2, CheckCircle } from "lucide-react";
-import { MOCK_SCHEDULED } from "../cmsData";
 import api from "../../../../services/axios";
 import { st, SectionTitle, StatusBadge, Modal, ConfirmDialog, EmptyState, Field, ActionBtn, Pagination, useToastEmitter } from "../cmsUi";
 
@@ -23,22 +22,19 @@ export default function SchedulerSection() {
     setLoading(true);
     try {
       const { data } = await api.get("/cms/scheduled-tasks", { params: { limit: 50 } });
-      const list = data?.data ?? data;
-      if (Array.isArray(list) && list.length) {
-        setJobs(list.map(j => ({
-          ...j,
-          id: j._id || j.id,
-          scheduledAt: j.scheduledAt ? new Date(j.scheduledAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : j.scheduledAt,
-          rawScheduledAt: j.scheduledAt,
-          status: j.status || "pending",
-        })));
-      } else if (data?.data && Array.isArray(data.data)) {
-        setJobs(data.data.map(j => ({ ...j, id: j._id || j.id, scheduledAt: j.scheduledAt, rawScheduledAt: j.scheduledAt })));
-      } else {
-        setJobs(MOCK_SCHEDULED);
-      }
-    } catch {
-      setJobs(MOCK_SCHEDULED);
+      const raw=data?.data??data;
+      const list=Array.isArray(raw)?raw:(Array.isArray(raw?.data)?raw.data:[]);
+      setJobs(Array.isArray(list)?list.map(j => ({
+        ...j,
+        id: j._id || j.id,
+        _id: j._id||j.id,
+        scheduledAt: j.scheduledAt ? new Date(j.scheduledAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : j.scheduledAt,
+        rawScheduledAt: j.scheduledAt,
+        status: j.status || "pending",
+      })) : []);
+    } catch(e) {
+      toast?.(e?.response?.data?.message||"Failed to load jobs","error");
+      setJobs([]);
     } finally { setLoading(false); }
   };
 
@@ -89,9 +85,8 @@ export default function SchedulerSection() {
       await api.delete(`/cms/scheduled-tasks/${id}`);
       setJobs(prev => prev.filter(x => (x._id || x.id) !== id));
       toast?.("Job removed (live)");
-    } catch {
-      setJobs(prev => prev.filter(x => x.id !== j.id));
-      toast?.("Job removed (local)");
+    } catch(e) {
+      toast?.(e?.response?.data?.message||"Delete failed","error");
     }
   };
 

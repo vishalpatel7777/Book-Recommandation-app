@@ -11,7 +11,7 @@ const hpp = require("hpp");
 const fs = require("fs");
 const cookieParser = require("cookie-parser");
 
-const { globalLimiter } = require("./middleware/rateLimiter");
+const { apiLimiter } = require("./middleware/rateLimiter");
 const logger = require("./utils/logger");
 
 const app = express();
@@ -31,8 +31,11 @@ app.use(helmet());
 app.use(cors(appConfig.cors));
 app.options("*", cors(appConfig.cors));
 
-// --- Global rate limiter ---
-app.use(globalLimiter);
+// --- Rate limiter: per-route (NOT global) — admin can refresh as needed ---
+// Previous globalLimiter (100 req/15min) caused 429 on admin navigating /admin/cms sections.
+// Now apiLimiter is 1000 req/15min and skips admin users (checked via JWT cookie in skip function).
+// Auth routes keep strict authLimiter (10/15min) separately in auth.routes.js.
+app.use(apiLimiter);
 
 // --- Body parsing ---
 // Capture raw body for webhook HM  AC verification before JSON parsing

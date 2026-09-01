@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { CheckCircle, Plus, Edit2, Trash2, Eye } from "lucide-react";
-import { MOCK_AUTHORS } from "../cmsData";
 import { st, SectionTitle, StatusBadge, Toggle, Modal, ConfirmDialog, Drawer, SearchBar, EmptyState, Field, ActionBtn, Checkbox, Pagination } from "../cmsUi";
 import { useToastEmitter } from "../cmsUi";
 import api from "../../../../services/axios";
@@ -45,13 +44,16 @@ function AuthorForm({ value, onChange }) {
 
 export default function AuthorsSection() {
   const toast = useToastEmitter();
-  const [authors, setAuthors] = useState(MOCK_AUTHORS);
-  const [live, setLive] = useState(false);
+  const [authors, setAuthors] = useState([]);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     api.get("/cms/authors").then(({ data }) => {
-      const list = data?.data ?? data;
-      if (Array.isArray(list) && list.length) { setAuthors(list.map(a=>({ ...a, id: a._id||a.id, avatarUrl: a.image||a.avatarUrl, books: a.booksCount ?? a.books ?? 0, followers: a.followers ?? 0, joined: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : a.joined })) ); setLive(true); }
-    }).catch(()=>{});
+      const raw = data?.data ?? data;
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+      if (Array.isArray(list)) {
+        setAuthors(list.map(a=>({ ...a, id: a._id||a.id, _id: a._id||a.id, avatarUrl: a.image||a.avatarUrl, books: a.booksCount ?? a.books ?? 0, followers: a.followers ?? 0, joined: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : (a.joined||"") })));
+      }
+    }).catch((e)=>{ toast?.(e?.response?.data?.message||"Failed to load authors","error"); }).finally(()=>setLoading(false));
   }, []);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState([]);
@@ -62,7 +64,7 @@ export default function AuthorsSection() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 10;
 
-  const filtered = authors.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = authors.filter((a) => !search || String(a.name||"").toLowerCase().includes(search.toLowerCase()));
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const openAdd = () => { setForm(EMPTY); setModal({ mode: "add" }); };
@@ -77,39 +79,38 @@ export default function AuthorsSection() {
         const payload = { name: form.name, bio: form.bio, website: form.website, twitter: form.twitter, instagram: form.instagram, verified: form.verified, featured: form.featured, followers: Number(form.followers)||0, image: form.avatarUrl||form.image||"" };
         const { data } = await api.post("/cms/authors", payload);
         const saved = data?.data ?? data;
-        setAuthors((prev) => [...prev, { ...form, ...saved, id: saved._id||saved.id, avatarUrl: saved.image||form.avatarUrl, books: saved.booksCount ?? 0 }]);
+        setAuthors((prev) => [...prev, { ...form, ...saved, id: saved._id||saved.id, _id: saved._id||saved.id, avatarUrl: saved.image||form.avatarUrl, books: saved.booksCount ?? 0 }]);
         toast?.("Author added (live)");
       } else {
         const payload = { name: form.name, bio: form.bio, website: form.website, twitter: form.twitter, instagram: form.instagram, verified: form.verified, featured: form.featured, followers: Number(form.followers)||0, image: form.avatarUrl||form.image||"" };
         const id = modal.id;
         const { data } = await api.put(`/cms/authors/${id}`, payload);
         const saved = data?.data ?? data;
-        setAuthors((prev) => prev.map((a) => a.id === id ? { ...a, ...form, ...saved } : a));
+        setAuthors((prev) => prev.map((a) => (a._id||a.id) === id ? { ...a, ...form, ...saved, id: saved._id||saved.id } : a));
         toast?.("Author updated (live)");
       }
       setModal(null);
     } catch (e) {
-      if (live) { toast?.(e?.response?.data?.message||"Save failed","error"); return; }
-      // fallback to local when backend not reachable
-      if (modal.mode === "add") { setAuthors((prev) => [...prev, { ...form, id: `au${Date.now()}`, books: 0, joined: "Jun 2025" }]); toast?.("Author added (local)"); }
-      else { setAuthors((prev) => prev.map((a) => a.id === modal.id ? { ...a, ...form } : a)); toast?.("Author updated (local)"); }
-      setModal(null);
+      toast?.(e?.response?.data?.message||"Save failed","error");
     }
   };
 
   const deleteAuthor = async (a) => {
     const id = a._id || a.id;
     try { await api.delete(`/cms/authors/${id}`); setAuthors((prev) => prev.filter((x) => (x._id||x.id) !== id)); toast?.("Author removed (live)"); }
-    catch { setAuthors((prev) => prev.filter((x) => x.id !== a.id)); toast?.("Author removed (local)"); }
+    catch (e) { toast?.(e?.response?.data?.message||"Delete failed","error"); }
   };
 
   const toggleSelect = (id) => setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
   const toggleAll = () => setSelected(selected.length === paginated.length ? [] : paginated.map((a) => a.id));
 
-  const bulkDelete = () => {
-    setAuthors((prev) => prev.filter((a) => !selected.includes(a.id)));
+  const bulkDelete = async () => {
+    try {
+      await Promise.all(selected.map(id => api.delete(`/cms/authors/${id}`)));
+      setAuthors((prev) => prev.filter((a) => !selected.includes(a.id) && !selected.includes(a._id)));
+      toast?.(`${selected.length} author(s) removed (live)`);
+    } catch(e){ toast?.(e?.response?.data?.message||"Bulk delete failed","error"); }
     setSelected([]);
-    toast?.(`${selected.length} author(s) removed`);
   };
 
   return (
@@ -132,8 +133,8 @@ export default function AuthorsSection() {
           )}
         </div>
 
-        {paginated.length === 0 ? (
-          <EmptyState title="No authors found" desc="Try a different search or add a new author." />
+        {loading ? <div style={{textAlign:"center",padding:"40px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading authors…</div> : paginated.length === 0 ? (
+          <EmptyState title="No authors found" desc={authors.length===0 ? "No authors in database. Add your first author." : "Try a different search."} />
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>

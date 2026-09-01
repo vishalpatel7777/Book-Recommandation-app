@@ -396,7 +396,7 @@ async function getBookAnalytics({ limit = 5 } = {}) {
   const enriched = books.map((b) => ({
     title: b.title,
     author: b.author,
-    views: Math.floor(Math.random() * 2000) + 500, // until view tracking implemented
+    views: 0, // view tracking not yet implemented — was previously random mock
     purchases: purchaseMap[String(b._id)] || 0,
     ratings: b.ratings || 0,
     price: b.price,

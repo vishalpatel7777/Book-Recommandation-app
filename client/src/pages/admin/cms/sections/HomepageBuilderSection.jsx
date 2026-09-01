@@ -59,8 +59,9 @@ function BlockConfig({ value, onChange }) {
 
 export default function HomepageBuilderSection() {
   const toast = useToastEmitter();
-  const [blocks, setBlocks] = useState(INITIAL_BLOCKS);
-  useEffect(()=>{ api.get("/cms/homepage-blocks").then(({data})=>{ const d=data?.data??data; const list=d?.blocks??d; if(Array.isArray(list)&&list.length) setBlocks(list.map(b=>({ ...b, id:b.blockId||b.id, type:b.type, status:b.status||"active", order:b.order })) ); }).catch(()=>{}); },[]);
+  const [blocks, setBlocks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(()=>{ api.get("/cms/homepage-blocks").then(({data})=>{ const d=data?.data??data; const list=d?.blocks??d; const arr=Array.isArray(list)?list:(Array.isArray(d)?d:[]); if(Array.isArray(arr) && arr.length) setBlocks(arr.map(b=>({ ...b, id:b.blockId||b.id, blockId:b.blockId||b.id, type:b.type, status:b.status||"active", order:b.order }))); else if(Array.isArray(arr)) setBlocks(arr); }).catch((e)=>{ toast?.(e?.response?.data?.message||"Failed to load blocks","error"); }).finally(()=>setLoading(false)); },[]);
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(EMPTY_BLOCK);
   const [confirm, setConfirm] = useState(null);
@@ -122,6 +123,7 @@ export default function HomepageBuilderSection() {
 
       <div style={{ ...st.card, marginBottom: 16 }}>
         <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 16 }}>Drag rows to reorder. Toggle visibility per section. Changes apply after Publish.</p>
+        {loading ? <div style={{textAlign:"center",padding:"30px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading blocks…</div> : blocks.length===0 ? <div style={{textAlign:"center",padding:"30px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>No homepage blocks. Add a section or publish defaults.</div> : null}
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {blocks.map((b) => (
             <div key={b.id}

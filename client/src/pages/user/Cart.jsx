@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingCart, ArrowRight, Package, Gift, BookOpen, Shield, ChevronRight, Tag, X, Check, AlertCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import Loader from "../../components/common/Loader/Loader";
 import CartBookCard from "../../components/books/Card/CartBookCard";
 import CustomAlert from "../../components/common/Alert/CustomAlert";
 import api from "../../services/axios";
-import { CMS_COUPONS, CMS_PROMOTIONS } from "../../store/cmsStore";
+import { usePromotionsLive } from "../../hooks/useCmsLive";
+import { clearCartState } from "../../store/slices/user.slice";
 
 const Cart = () => {
   const [cart, setCart]             = useState([]);
@@ -20,7 +21,12 @@ const Cart = () => {
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const userId = useSelector((s) => s.auth.user?.id ?? null);
+
+  const [liveCouponsHint, setLiveCouponsHint] = useState([]);
+  const livePromos = usePromotionsLive();
+  const activeBanner = livePromos.find((p) => p.type === "Banner");
 
   useEffect(() => {
     (async () => {
@@ -36,34 +42,43 @@ const Cart = () => {
   }, []);
 
   const subtotal = cart.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
-  const discount = appliedCoupon
-    ? appliedCoupon.type === "flat"
-      ? Math.min(appliedCoupon.value, subtotal)
-      : Math.min((subtotal * appliedCoupon.value) / 100, appliedCoupon.maxDiscount || Infinity)
-    : 0;
+  // discount is now authoritative from POST /coupons/validate (server/src/services/cms.service.js:95) — not client-calc from mock
+  const discount = appliedCoupon?.discount ?? 0;
+  useEffect(()=>{ api.get("/cms/coupons").then(({data})=>{ const list=data?.data??data; const arr=Array.isArray(list)?list:(Array.isArray(list?.data)?list.data:[]); if(Array.isArray(arr)) setLiveCouponsHint(arr.filter(c=>c.status==="active").slice(0,3)); }).catch(()=>{}); },[]);
 
   useEffect(() => {
     setTotal((subtotal - discount).toFixed(2));
   }, [cart, appliedCoupon]);
 
-  const applyCoupon = () => {
+  const applyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) { setCouponError("Enter a coupon code."); return; }
     setCouponError("");
     setCouponLoading(true);
-    setTimeout(() => {
-      const found = CMS_COUPONS.find((c) => c.code.toUpperCase() === couponCode.trim().toUpperCase());
-      if (!found) {
-        setCouponError("Invalid coupon code.");
-        setCouponLoading(false);
-        return;
+    try {
+      // API-validated — replaces previous CMS_COUPONS mock lookup (server/src/services/cms.service.js:95 validateCoupon)
+      const { data } = await api.post("/coupons/validate", { code, cartTotal: subtotal });
+      if (!data?.valid && !data?.success) {
+        // /coupons/validate returns {success:true, valid, discount, message}
+        const valid = data?.valid ?? data?.success;
+        if (!valid) { setCouponError(data?.message || "Invalid coupon code."); return; }
       }
-      if (subtotal < (found.min || 0)) {
-        setCouponError(`Minimum order ₹${found.min} required.`);
-        setCouponLoading(false);
-        return;
-      }
-      setAppliedCoupon(found);
+      if (data?.valid === false) { setCouponError(data?.message || "Invalid coupon code."); return; }
+      // store authoritative discount from server; keep code for display/removal
+      setAppliedCoupon({ code, discount: Number(data.discount)||0, couponId: data.couponId, type: "flat", value: Number(data.discount)||0 });
+      // optionally enrich with full coupon doc for richer display
+      try {
+        if (data.couponId) {
+          const { data: cData } = await api.get(`/cms/coupons/${data.couponId}`);
+          const full = cData?.data ?? cData;
+          if (full?.code) setAppliedCoupon({ ...full, discount: Number(data.discount)||0 });
+        }
+      } catch {}
+    } catch (e) {
+      setCouponError(e?.response?.data?.message || "Invalid coupon code.");
+    } finally {
       setCouponLoading(false);
-    }, 600);
+    }
   };
 
   const removeCoupon = () => {
@@ -73,23 +88,41 @@ const Cart = () => {
   };
 
   const handleOrder = async () => {
+    if (!cart.length) return;
     try {
+      const bookIds = cart.map((b) => b._id).filter(Boolean);
+      if (!bookIds.length) {
+        setAlertMessage("No valid books in cart.");
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 3000);
+        return;
+      }
       const orderData = {
-        user: userId,
-        book: cart.map((b) => b._id),
+        book: bookIds.length === 1 ? bookIds[0] : bookIds,
         paymentMethod: "Online",
         coupon: appliedCoupon?.code,
         discount,
         total: Number(total),
       };
       const res = await api.post("/add-purchase", orderData);
-      await api.delete("/clear-cart");
+      // Cart API supports both POST and DELETE for clear; use POST for compatibility
+      try { await api.post("/clear-cart"); } catch { try { await api.delete("/clear-cart"); } catch {} }
       setCart([]);
-      navigate("/thankyou", { state: { orderId: res.data.orderId } });
-    } catch {
-      setAlertMessage("Order placement coming soon — payment integration in progress.");
+      dispatch(clearCartState());
+      navigate("/thankyou", { state: { orderId: res.data.orderId || res.data.order?._id, count: bookIds.length } });
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
+      if (msg?.includes("already purchased")) {
+        setAlertMessage("Some books already purchased — those were skipped, others ordered. Check your library.");
+        try { await api.post("/clear-cart"); } catch { try { await api.delete("/clear-cart"); } catch {} }
+        setCart([]);
+        dispatch(clearCartState());
+        navigate("/thankyou", { state: { message: msg } });
+        return;
+      }
+      setAlertMessage(msg || "Failed to place order. Please try again.");
       setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 3000);
+      setTimeout(() => setShowAlert(false), 4000);
     }
   };
 
@@ -136,8 +169,6 @@ const Cart = () => {
     );
   }
 
-  const activeBanner = CMS_PROMOTIONS.find((p) => p.type === "Banner");
-
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-page)" }}>
 
@@ -154,7 +185,7 @@ const Cart = () => {
         <div style={{ background: "var(--accent-sage-bg)", borderBottom: `1px solid var(--accent-sage-ring)`, padding: "10px var(--space-6)", display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--space-3)" }}>
           <Tag size={12} style={{ color: "var(--accent-sage)" }} />
           <p style={{ fontSize: "var(--text-xs)", color: "var(--accent-sage-text)", fontWeight: 500 }}>
-            {activeBanner.name} — Save {activeBanner.discount} · Use code: <strong>{CMS_COUPONS[0]?.code || "SUMMER20"}</strong>
+            {activeBanner.name} — Save {activeBanner.discount} · Use code: <strong>{activeBanner.badge || liveCouponsHint[0]?.code || "SAVE"}</strong>
           </p>
         </div>
       )}
@@ -212,10 +243,10 @@ const Cart = () => {
                       <AlertCircle size={11} /> {couponError}
                     </p>
                   )}
-                  {/* Hint available coupons */}
-                  {CMS_COUPONS.length > 0 && (
+                  {/* Hint available coupons — live from GET /cms/coupons, not mock CMS_COUPONS */}
+                  {liveCouponsHint.length > 0 && (
                     <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginTop: "var(--space-3)" }}>
-                      {CMS_COUPONS.slice(0, 3).map((c) => (
+                      {liveCouponsHint.map((c) => (
                         <button key={c.code} onClick={() => { setCouponCode(c.code); setCouponError(""); }}
                           style={{ padding: "2px 10px", borderRadius: "var(--radius-full)", border: `1px dashed var(--accent-sage-ring)`, background: "var(--accent-sage-bg)", color: "var(--accent-sage-text)", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)", letterSpacing: "0.04em" }}>
                           {c.code}
@@ -233,7 +264,7 @@ const Cart = () => {
                     <div>
                       <p style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--accent-sage-text)" }}>{appliedCoupon.code}</p>
                       <p style={{ fontSize: "var(--text-xs)", color: "var(--accent-sage)", marginTop: 1 }}>
-                        {appliedCoupon.type === "flat" ? `₹${appliedCoupon.value} off` : `${appliedCoupon.value}% off`} applied
+                        ₹{Number(appliedCoupon.discount||appliedCoupon.value||0).toFixed(2)} off applied
                       </p>
                     </div>
                   </div>

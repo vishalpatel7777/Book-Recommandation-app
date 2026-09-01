@@ -13,13 +13,15 @@ const transporter = nodemailer.createTransport({
  * Sends a pre-configured email via the application's transporter.
  * @param {object} mailOptions - Nodemailer mail options (to, subject, html/text)
  */
+const logger = require("../config/logger");
+
 const sendMail = async (mailOptions) => {
     try {
         const info = await transporter.sendMail(mailOptions);
-        console.log("Email sent successfully: %s", info.messageId);
+        logger.info("Email sent", { messageId: info.messageId, to: mailOptions.to });
         return true;
     } catch (error) {
-        console.error("Error sending email:", error.message);
+        logger.error("Email send failed", { error: error.message, to: mailOptions.to });
         throw new Error("Failed to send email.");
     }
 };

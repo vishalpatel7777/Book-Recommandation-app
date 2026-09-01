@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Search, X, HelpCircle } from "lucide-react";
 import { CMS_FAQ } from "../../../store/cmsStore";
+import { useFaqLive } from "../../../hooks/useCmsLive";
 
-const CATEGORIES = ["All", ...new Set(CMS_FAQ.map((f) => f.category))];
+const STATIC_FAQ = CMS_FAQ;
+const CATEGORIES_STATIC = ["All", ...new Set(STATIC_FAQ.map((f) => f.category))];
 
 const FaqItem = ({ faq, isOpen, onToggle }) => (
   <div
@@ -63,10 +65,13 @@ const Faq = () => {
   const [openId, setOpenId] = useState(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+  const { items: liveItems, loading } = useFaqLive();
+  const items = liveItems ?? STATIC_FAQ;
+  const CATEGORIES = liveItems ? ["All", ...new Set(items.map((f) => f.category))] : CATEGORIES_STATIC;
 
-  const filtered = CMS_FAQ.filter((f) => {
+  const filtered = items.filter((f) => {
     if (category !== "All" && f.category !== category) return false;
-    if (search && !f.question.toLowerCase().includes(search.toLowerCase()) && !f.answer.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !String(f.question||"").toLowerCase().includes(search.toLowerCase()) && !String(f.answer||"").toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
@@ -80,7 +85,7 @@ const Faq = () => {
         </h2>
       </div>
       <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", marginBottom: "var(--space-6)" }}>
-        Everything you need to know about BookMosaic.
+        Everything you need to know about BookMosaic. {loading ? "· loading…" : liveItems ? "· live" : "· sample questions"}
       </p>
 
       {/* Search */}

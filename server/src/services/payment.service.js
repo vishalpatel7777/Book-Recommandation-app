@@ -60,7 +60,8 @@ const handleWebhook = async (webhookData, rawBody, signatureHeader) => {
     if (type === "PAYMENT_SUCCESS_WEBHOOK" && data?.payment?.payment_status === "SUCCESS") {
         const cfOrderId = data.order?.order_id;
         const orderNote = data.order?.order_note || "";
-        console.log("[Webhook] Payment success for order:", cfOrderId);
+        const logger = require("../config/logger");
+        logger.info("Webhook payment success", { cfOrderId });
 
         // Attempt server-side fulfillment when order_note contains bookId:userId
         if (orderNote && orderNote.includes(":")) {
@@ -73,27 +74,33 @@ const handleWebhook = async (webhookData, rawBody, signatureHeader) => {
                     const existing = await Purchase.findOne({ user: userId, book: bookId, status: "Completed" });
                     if (!existing) {
                         await orderService.recordPurchaseAndCreateOrder(userId, bookId, "Online");
-                        console.log("[Webhook] Fulfillment complete — user:", userId, "book:", bookId);
+                        const logger2 = require("../config/logger");
+                        logger2.info("Webhook fulfillment complete", { userId, bookId });
                     } else {
-                        console.log("[Webhook] Already fulfilled — skipping:", cfOrderId);
+                        const logger3 = require("../config/logger");
+                        logger3.info("Webhook already fulfilled — skipping", { cfOrderId });
                     }
                 } catch (fulfillErr) {
-                    console.error("[Webhook] Fulfillment error:", fulfillErr.message);
+                    const logger4 = require("../config/logger");
+                    logger4.error("Webhook fulfillment error", { error: fulfillErr.message });
                 }
             }
         }
     }
 
     if (type === "PAYMENT_FAILED_WEBHOOK") {
-        console.log("[Webhook] Payment failed for order:", data?.order?.order_id);
+        const logger5 = require("../config/logger");
+        logger5.warn("Webhook payment failed", { orderId: data?.order?.order_id });
     }
 
     if (type === "REFUND_SUCCESS_WEBHOOK") {
-        console.log("[Webhook] Refund success:", data?.refund?.refund_id);
+        const logger6 = require("../config/logger");
+        logger6.info("Webhook refund success", { refundId: data?.refund?.refund_id });
     }
 
     if (type === "REFUND_FAILED_WEBHOOK") {
-        console.log("[Webhook] Refund failed:", data?.refund?.refund_id);
+        const logger7 = require("../config/logger");
+        logger7.warn("Webhook refund failed", { refundId: data?.refund?.refund_id });
     }
 
     return { success: true };

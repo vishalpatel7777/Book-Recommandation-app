@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Eye } from "lucide-react";
-import { MOCK_PROMOTIONS } from "../cmsData";
 import api from "../../../../services/axios";
 import { st, SectionTitle, StatusBadge, Modal, ConfirmDialog, Drawer, SearchBar, EmptyState, Field, ActionBtn, Checkbox, Pagination, useToastEmitter } from "../cmsUi";
 
@@ -59,8 +58,9 @@ function PreviewModal({ promo, onClose }) {
 
 export default function PromotionsSection() {
   const toast = useToastEmitter();
-  const [promos, setPromos] = useState(MOCK_PROMOTIONS);
-  useEffect(()=>{ api.get("/cms/promotions").then(({data})=>{ const list=data?.data??data; if(Array.isArray(list)&&list.length) setPromos(list.map(x=>({ ...x, id:x._id||x.id, name:x.title||x.name, type:x.type||"Banner", status:x.status||"active", starts:x.starts||"", ends:x.ends||"", discount:x.discount||"", cta:x.cta||"", ctaUrl:x.ctaLink||x.ctaUrl||"" }))); }).catch(()=>{}); },[]);
+  const [promos, setPromos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(()=>{ api.get("/cms/promotions").then(({data})=>{ const raw=data?.data??data; const list=Array.isArray(raw)?raw:(Array.isArray(raw?.data)?raw.data:[]); if(Array.isArray(list)) setPromos(list.map(x=>({ ...x, id:x._id||x.id, _id:x._id||x.id, name:x.title||x.name, title:x.title||x.name, type:x.type||"Banner", status:x.status||"active", starts:x.starts||"", ends:x.ends||"", discount:x.discount||"", cta:x.cta||"", ctaUrl:x.ctaLink||x.ctaUrl||"" })) ); }).catch((e)=>{ toast?.(e?.response?.data?.message||"Failed to load promotions","error"); }).finally(()=>setLoading(false)); },[]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState([]);
   const [modal, setModal] = useState(null); // "add"|"edit"|"preview"
@@ -70,7 +70,7 @@ export default function PromotionsSection() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 10;
 
-  const filtered = promos.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = promos.filter(p => !search || String(p.name||p.title||"").toLowerCase().includes(search.toLowerCase()));
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const [editingId, setEditingId] = useState(null);
@@ -87,7 +87,7 @@ export default function PromotionsSection() {
     }catch(e){ toast?.(e?.response?.data?.message||"Save failed","error"); }
   };
 
-  const deletePromo = async (p) => { const id=p._id||p.id; try{ await api.delete(`/cms/promotions/${id}`); setPromos(prev=>prev.filter(x=>(x._id||x.id)!==id)); toast?.("Promotion deleted (live)"); }catch{ setPromos((prev) => prev.filter(x => x.id !== p.id)); toast?.("Promotion deleted (local)"); } };
+  const deletePromo = async (p) => { const id=p._id||p.id; try{ await api.delete(`/cms/promotions/${id}`); setPromos(prev=>prev.filter(x=>(x._id||x.id)!==id)); toast?.("Promotion deleted (live)"); }catch(e){ toast?.(e?.response?.data?.message||"Delete failed","error"); } };
   const toggleSelect = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   const toggleAll = () => setSelected(selected.length === paginated.length ? [] : paginated.map(p => p.id));
 
@@ -103,12 +103,12 @@ export default function PromotionsSection() {
           {selected.length > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>{selected.length} selected</span>
-              <ActionBtn variant="danger" onClick={() => { setPromos(p => p.filter(x => !selected.includes(x.id))); setSelected([]); toast?.("Deleted"); }}>Delete</ActionBtn>
+              <ActionBtn variant="danger" onClick={async () => { try{ await Promise.all(selected.map(id=>api.delete(`/cms/promotions/${id}`))); setPromos(p => p.filter(x => !selected.includes(x.id) && !selected.includes(x._id))); toast?.("Deleted (live)"); }catch(e){ toast?.(e?.response?.data?.message||"Bulk delete failed","error"); } setSelected([]); }}>Delete</ActionBtn>
             </div>
           )}
         </div>
 
-        {paginated.length === 0 ? <EmptyState title="No promotions" desc="Create your first campaign." /> : (
+        {loading ? <div style={{textAlign:"center",padding:"40px 0",color:"var(--text-muted)",fontSize:"0.82rem"}}>Loading promotions…</div> : paginated.length === 0 ? <EmptyState title="No promotions" desc={promos.length===0 ? "No promotions in database. Create your first campaign." : "Try a different filter."} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>

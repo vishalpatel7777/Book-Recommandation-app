@@ -70,3 +70,46 @@ export function usePromotionsLive() {
   useEffect(() => { api.get("/promotions/active").then(({ data }) => setPromos(data?.data ?? [])).catch(() => {}); }, []);
   return promos;
 }
+
+export function useBlogLive() {
+  const [posts, setPosts] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api.get("/blog").then(({ data }) => {
+      // SiteSetting shape: {success:true,data:{value:{posts:[]}}} or {group:"blog",value:{posts:[]}}
+      const v = data?.data?.value ?? data?.value ?? data?.data ?? data;
+      const list = v?.posts ?? (Array.isArray(v) ? v : []);
+      setPosts(Array.isArray(list) && list.length ? list : null); // null = fallback to static sample
+    }).catch(()=> setPosts(null)).finally(()=> setLoading(false));
+  }, []);
+  return { posts, loading };
+}
+
+export function useFaqLive() {
+  const [items, setItems] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api.get("/faq").then(({ data }) => {
+      const v = data?.data?.value ?? data?.value ?? data?.data ?? data;
+      const list = v?.items ?? (Array.isArray(v) ? v : []);
+      setItems(Array.isArray(list) && list.length ? list : null);
+    }).catch(()=> setItems(null)).finally(()=> setLoading(false));
+  }, []);
+  return { items, loading };
+}
+
+export function useSocialProofLive() {
+  const [proof, setProof] = useState(null);
+  useEffect(() => {
+    api.get("/social-proof").then(({ data }) => {
+      const v = data?.data?.value ?? data?.value ?? data?.data ?? data;
+      if (v && (v.titles || v.readers)) setProof(v);
+    }).catch(()=>{});
+    // also compute live counters from /books and /analytics as progressive enhancement
+    api.get("/get-all-books").then(({ data }) => {
+      const count = data?.data?.length ?? data?.length ?? 0;
+      if (count) setProof(p=> ({ ...(p||{}), titles: `${Math.max(10, Math.round(count/100)*100)}+` }));
+    }).catch(()=>{});
+  }, []);
+  return proof;
+}

@@ -73,6 +73,80 @@ const recordPurchaseAndCreateOrder = async (user, bookId, paymentMethod) => {
     return { purchase, order };
 };
 
+// Cart multi-buy: creates one Order with multiple books + one Purchase per book
+const recordCartPurchase = async (user, bookIds, paymentMethod) => {
+    if (!mongoose.Types.ObjectId.isValid(user)) {
+        throw new Error("Invalid user or book ID");
+    }
+    if (!Array.isArray(bookIds) || bookIds.length === 0) {
+        throw new Error("No books provided");
+    }
+    // Validate all book IDs
+    for (const id of bookIds) {
+        if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid user or book ID");
+    }
+    const books = await Book.find({ _id: { $in: bookIds } });
+    if (books.length !== bookIds.length) {
+        throw new Error("Book not found");
+    }
+    // Check for already purchased books (filter out, don't fail whole cart — skip duplicates)
+    const existing = await Purchase.find({ user, book: { $in: bookIds } }).select("book");
+    const existingSet = new Set(existing.map(p => p.book.toString()));
+    const toPurchase = bookIds.filter(id => !existingSet.has(id.toString()));
+    if (toPurchase.length === 0) {
+        throw new Error("All books already purchased");
+    }
+    // If some already purchased, proceed with remaining (partial success)
+    const bookMap = Object.fromEntries(books.map(b => [b._id.toString(), b]));
+    const totalPrice = toPurchase.reduce((sum, id) => sum + (bookMap[id.toString()]?.price || 0), 0);
+
+    // Create single Order containing all new books
+    const order = new Order({
+        user,
+        books: toPurchase,
+        totalPrice,
+        paymentMethod,
+        status: "Completed",
+    });
+    await order.save();
+
+    // Create Purchase per book
+    const purchases = [];
+    for (const bookId of toPurchase) {
+        const purchase = new Purchase({ user, book: bookId, paymentMethod, status: "Completed", order: order._id });
+        await purchase.save();
+        purchases.push(purchase);
+        // Reading status
+        try {
+            await ReadingStatus.findOneAndUpdate(
+                { userId: user, bookId },
+                { $setOnInsert: { userId: user, bookId, status: "want_to_read" } },
+                { upsert: true, new: true }
+            );
+        } catch {}
+    }
+
+    await User.findByIdAndUpdate(user, { $push: { order: order._id } });
+
+    // Email: first book title + count
+    try {
+        const userData = await User.findById(user).select("email username fullname");
+        if (userData?.email) {
+            const firstBook = bookMap[toPurchase[0].toString()];
+            await emailService.sendPurchaseConfirmationEmail(userData.email, {
+                username: userData.username || userData.fullname,
+                bookTitle: toPurchase.length > 1 ? `${firstBook.title} + ${toPurchase.length - 1} more` : firstBook.title,
+                bookAuthor: firstBook.author,
+                amount: totalPrice,
+                orderId: order._id.toString().slice(-8).toUpperCase(),
+                purchaseDate: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
+            });
+        }
+    } catch {}
+
+    return { order, purchases };
+};
+
 const fetchOrderHistory = async (userId, page, limit) => {
     if (!mongoose.Types.ObjectId.isValid(userId)) throw new Error("Invalid user ID");
 
@@ -119,6 +193,7 @@ const checkOwnership = async (userId, bookId) => {
 
 module.exports = {
     recordPurchaseAndCreateOrder,
+    recordCartPurchase,
     fetchOrderHistory,
     fetchUserLibrary,
     checkOwnership,
