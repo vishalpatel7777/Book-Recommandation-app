@@ -11,6 +11,7 @@ const globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests, please try again later." },
+  validate: { xForwardedForHeader: false },
 });
 
 // Per-API limiter for general routes — generous for admin dashboard navigation.
@@ -21,6 +22,9 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests, please try again later." },
+  // Render sets X-Forwarded-For — trust proxy is set in app.cjs, but also disable this
+  // validation to avoid ERR_ERL_UNEXPECTED_X_FORWARDED_FOR if app.set is missed
+  validate: { xForwardedForHeader: false },
   skip: (req) => {
     // Skip limiter entirely for admin users (verified via JWT cookie)
     // We try to decode without verify for speed; if fails, don't skip.
@@ -42,6 +46,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many login attempts, please try again later." },
+  validate: { xForwardedForHeader: false },
 });
 
 module.exports = { globalLimiter, apiLimiter, authLimiter };

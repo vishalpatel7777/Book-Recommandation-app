@@ -16,6 +16,10 @@ const logger = require("./utils/logger");
 
 const app = express();
 
+// Render (and most proxies) set X-Forwarded-For — must be before rateLimit
+// Fixes ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on Render
+app.set("trust proxy", 1);
+
 // --- Request ID + structured logging (must be early for correlation) ---
 app.use((req, res, next) => {
   const requestId = req.headers["x-request-id"] || Math.random().toString(36).slice(2, 10);
