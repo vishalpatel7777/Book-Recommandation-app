@@ -48,5 +48,5 @@ async function run(){
   const us=await User.find({ email: { $in:[demoAuthorEmail, demoUserEmail, adminEmail] } }).select('username email role isVerified').lean();
   console.log(JSON.stringify(us,null,2));
   await mongoose.disconnect();
-}
+} 
 run().catch(e=>{console.error(e);process.exit(1)});
