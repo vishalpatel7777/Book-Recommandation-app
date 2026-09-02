@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-require('dotenv').config();
+require('dotenv').config({ path: require("path").join(__dirname, "../.env") });
 async function run(){
   await mongoose.connect(process.env.DB_URI);
   const User = require('../src/models/user.model');

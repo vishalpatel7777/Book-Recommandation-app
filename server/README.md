@@ -5,11 +5,18 @@
 ## Setup
 
 ```bash
-cp .env.example .env   # fill DB_URI, JWT_SECRET (≥32 chars), FRONTEND_URL, EMAIL_*, CASHFREE_*, GOOGLE_CREDENTIALS
+cp .env.example .env   # fill DB_URI (or DATABASE_URL), JWT_SECRET (≥32 chars), FRONTEND_URL, EMAIL_*, CASHFREE_*, GOOGLE_CREDENTIALS
 npm install
-npm run db:indexes      # create 30+ indexes (books text, users, orders, etc.)
+# optional audit fix (non-blocking vulnerabilities)
+# npm audit fix
+npm run db:indexes      # create 30+ indexes (books text, users, orders, etc.) — accepts DB_URI or DATABASE_URL
 node scripts/seed-live-data.js       # authors (3), categories (20 from Filter.jsx), promos (3), coupons (3), notification templates (5), normalize book.genre
-node scripts/ensure-demo-users.js    # needs ADMIN_EMAIL / DEMO_* in .env — creates author/user/admin (isVerified:true)
+# PowerShell (Windows):
+#   $env:ADMIN_EMAIL="admin@example.com"; $env:ADMIN_PASSWORD="StrongPass123"; node scripts/ensure-demo-users.js
+# Bash/macOS/Linux:
+#   ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=StrongPass123 node scripts/ensure-demo-users.js
+# Or set ADMIN_EMAIL/ADMIN_PASSWORD/DEMO_* in server/.env then:
+node scripts/ensure-demo-users.js    # upsert demo logins from env
 npm run dev             # nodemon server.cjs → http://localhost:1000
 ```
 

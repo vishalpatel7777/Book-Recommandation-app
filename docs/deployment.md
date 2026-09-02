@@ -61,15 +61,22 @@ VITE_CASHFREE_MODE=sandbox
 ```bash
 # server
 npm --prefix server install
-npm --prefix server run db:indexes      # ensure 30+ indexes
+# optional: npm --prefix server audit fix (22 vulns reported, non-blocking)
+npm --prefix server run db:indexes      # ensure 30+ indexes — supports DB_URI or DATABASE_URL
 node server/scripts/seed-live-data.js   # idempotent: 20 categories, 3 authors/promos/coupons, 5 templates, normalize genres
-ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=StrongPass123 node server/scripts/ensure-demo-users.js
+# PowerShell (Windows):
+#   $env:ADMIN_EMAIL="admin@example.com"; $env:ADMIN_PASSWORD="StrongPass123"; node server/scripts/ensure-demo-users.js
+# Bash/macOS/Linux:
+#   ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=StrongPass123 node server/scripts/ensure-demo-users.js
+# Or set ADMIN_EMAIL/ADMIN_PASSWORD in server/.env then:
+node server/scripts/ensure-demo-users.js
 
 # client
 npm --prefix client install
+# optional: npm --prefix client audit fix
 npm --prefix client run build            # dist/ with manualChunks (vendor/chunks/adminCMS)
 
-# tests
+# tests (logger warn for payment webhook is expected, not a failure)
 npm --prefix server test                 # 10 suites 132 tests
 ```
 

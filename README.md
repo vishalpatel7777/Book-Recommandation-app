@@ -74,9 +74,19 @@ cp server/.env.example server/.env
 # 4. Install & seed
 npm --prefix server install
 npm --prefix client install
+# optional: fix audit warnings (non-blocking)
+# npm --prefix server audit fix
+# npm --prefix client audit fix
+
 npm --prefix server run db:indexes
+# DB_URI is read from server/.env — scripts now support both DB_URI and DATABASE_URL via dotenv path fix
 node server/scripts/seed-live-data.js      # 3 authors, 20 categories, 3 promos/coupons, 5 notification templates, normalize book genres
-node server/scripts/ensure-demo-users.js   # requires ADMIN_EMAIL/DEMO_* in .env (see server/.env.example)
+# PowerShell (Windows) — use $env: syntax
+#   $env:ADMIN_EMAIL="admin@example.com"; $env:ADMIN_PASSWORD="StrongPass123"; node server/scripts/ensure-demo-users.js
+# Bash/macOS/Linux
+#   ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=StrongPass123 node server/scripts/ensure-demo-users.js
+# Or set ADMIN_EMAIL/ADMIN_PASSWORD/DEMO_* in server/.env then simply:
+node server/scripts/ensure-demo-users.js   # reads ADMIN_EMAIL/DEMO_* from .env
 
 # 5. Dev
 npm --prefix server run dev   # http://localhost:1000/api/v1

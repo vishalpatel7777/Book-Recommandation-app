@@ -1,11 +1,11 @@
 "use strict";
 
-require("dotenv").config();
+require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 const { MongoClient } = require("mongodb");
 
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL || process.env.DB_URI;
 if (!DATABASE_URL) {
-  console.error(JSON.stringify({ level: "error", msg: "DATABASE_URL is not set" }));
+  console.error(JSON.stringify({ level: "error", msg: "DATABASE_URL/DB_URI is not set — set DB_URI in server/.env (see .env.example)" }));
   process.exit(1);
 }
 
