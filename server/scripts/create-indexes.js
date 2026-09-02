@@ -316,17 +316,23 @@ async function run() {
   const succeeded = results.filter((r) => r.status === "ok");
   const failed = results.filter((r) => r.status === "error");
 
+  // Index name mismatches (code 85) mean an equivalent index already exists with a different auto-generated name
+  // (e.g. code_1 vs coupons_code_ci_unique) — functionally identical, so don't fail the deploy.
+  const nameMismatchOnly = failed.every((r) => r.error && r.error.includes("different name"));
+  const realFailures = nameMismatchOnly ? [] : failed;
+
   console.log(JSON.stringify({
-    level: "info",
+    level: nameMismatchOnly ? "warn" : "info",
     ts: new Date().toISOString(),
-    msg: "index creation complete",
+    msg: nameMismatchOnly ? "index creation complete (with name mismatches — existing indexes are compatible)" : "index creation complete",
     total: results.length,
     succeeded: succeeded.length,
     failed: failed.length,
+    realFailures: realFailures.length,
     failedIndexes: failed.map((r) => ({ name: r.name, error: r.error })),
   }));
 
-  if (failed.length > 0) {
+  if (realFailures.length > 0) {
     process.exit(1);
   }
   process.exit(0);
