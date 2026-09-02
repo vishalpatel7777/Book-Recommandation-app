@@ -30,7 +30,9 @@ module.exports = {
   cookie: {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
-    sameSite: env.NODE_ENV === "production" ? "strict" : "lax",
+    // Must be 'none' for cross-site (Netlify -> Render) with credentials:true
+    // strict would block cookie on cross-site requests, causing 401 on /user-information etc.
+    sameSite: env.NODE_ENV === "production" ? "none" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in ms
   },
 
