@@ -1,0 +1,23 @@
+{
+  "name": "BookMosaic",
+  "short_name": "BookMosaic",
+  "description": "Discover your next great read — curated books for every mood.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF8F3",
+  "theme_color": "#5C7A5E",
+  "icons": [
+    {
+      "src": "/l.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/l.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+# robots.txt for BookMosaic — https://mybookmosaic.netlify.app
+User-agent: *
+Allow: /
+
+# Disallow admin and auth internals from indexing
+Disallow: /admin/
+Disallow: /profile/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /payment-success
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://mybookmosaic.netlify.app/sitemap.xml

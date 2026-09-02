@@ -1,0 +1,7 @@
+/* the humans responsible & colophon */
+Team: BookMosaic
+Site: https://mybookmosaic.netlify.app
+Contact: support@bookmosaic.example (VITE_SUPPORT_EMAIL)
+Stack: React 18, Vite 6, Tailwind 4, Express 4, Mongoose 8, Zod, Helmet
+Build: Vite manualChunks (vendor, adminCMS, charts) — see netlify.toml
+Thanks: Framer Motion, Lucide, Recharts, Cashfree

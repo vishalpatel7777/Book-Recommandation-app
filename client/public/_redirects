@@ -1,0 +1,3 @@
+# Netlify SPA redirect — must be in publish dir (dist) after build
+# This file is copied from public/ to dist/ by Vite
+/*    /index.html   200
